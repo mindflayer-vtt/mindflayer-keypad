@@ -8,7 +8,7 @@ using namespace websockets;
 
 struct KeyState {
   KeyState(const char *setKey) {
-    memcpy(this->key, setKey, 3);
+    strncpy(this->key, setKey, 3);
     this->key[3] = 0;
     this->isDown = false;
   }
@@ -185,12 +185,12 @@ void setup() {
 
   Serial.println("Connecting to WiFi...");
 
-  for(int i = 0; i < ROWS; i++) {
-    pinMode(rowPins[i],INPUT_PULLUP);
-  }
   for(int i = 0; i < COLS; i++) {
-    pinMode(colPins[i],OUTPUT);
-    digitalWrite(colPins[i],HIGH);
+    pinMode(colPins[i],INPUT_PULLUP);
+  }
+  for(int i = 0; i < ROWS; i++) {
+    pinMode(rowPins[i],OUTPUT);
+    digitalWrite(rowPins[i],HIGH);
   }
 
 
@@ -243,26 +243,25 @@ void loop() {
   const char* state = NULL;
   client.poll();
   if (client.available() && (millis()-startTime)>100) {
-    for(int y = 0; y < COLS; y++) {
-      digitalWrite(colPins[y],LOW);
-      for(int x = 0; x < ROWS; x++) {
-        if(keys[x][y].isDown == digitalRead(rowPins[x])) {
+    for(int x = 0; x < ROWS; x++) {
+      digitalWrite(rowPins[x],LOW);
+      for(int y = 0; y < COLS; y++) {
+        if(keys[x][y].isDown == digitalRead(colPins[y])) {
           keys[x][y].isDown = !keys[x][y].isDown;
           if(keys[x][y].isDown) {
             state = "down";
           } else {
             state = "up";
           }
-          if(state != NULL) {
-            snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
-            Serial.print("Sending: ");
-            Serial.println(buffer);
-            client.send(buffer);
-          }
+          snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
+          Serial.print("Sending: ");
+          Serial.println(buffer);
+          client.send(buffer);
+          
           state = NULL;
         }
       }
-      digitalWrite(colPins[y],HIGH);
+      digitalWrite(rowPins[x],HIGH);
     }
     startTime = millis();
   }
