@@ -159,6 +159,7 @@ void onMessageCallback(WebsocketsMessage message) {
     leds[1].r = root["led2"]["r"].as<uint8_t>();
     leds[1].g = root["led2"]["g"].as<uint8_t>();
     leds[1].b = root["led2"]["b"].as<uint8_t>();
+    FastLED.show();
   }
 }
 
@@ -237,6 +238,8 @@ void setup() {
   //LED init
   FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalSMD5050 );
   FastLED.setBrightness( BRIGHTNESS );
+
+  FastLED.show();
 }
 
 void loop() {
@@ -254,8 +257,6 @@ void loop() {
             state = "up";
           }
           snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
-          Serial.print("Sending: ");
-          Serial.println(buffer);
           client.send(buffer);
           
           state = NULL;
@@ -272,6 +273,4 @@ void loop() {
       client.end();
     }
   }
-  FastLED.show();
-  FastLED.delay(8);
 }
