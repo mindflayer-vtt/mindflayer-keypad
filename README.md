@@ -34,5 +34,5 @@ You have to have set up the following software in order to compile an flash the 
 1. Connect the wemos d1 mini to the PC with USB
 2. Run the following command to flash the controller
    ```bash
-   platformio -e controller_1 -t upload
+   platformio run -e controller_1 -t upload
    ```

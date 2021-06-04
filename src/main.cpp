@@ -28,10 +28,10 @@ static const byte COLS = 3; //three columns
 static byte rowPins[ROWS] = {5, 4, 0, 2}; //connect to the row pinouts of the kpd
 static byte colPins[COLS] = {14, 12, 13}; //connect to the column pinouts of the kpd
 static KeyState keys[ROWS][COLS] = {
-  {{"NW"},{"N"},{"NE"}},
-  {{"W"},{"TAB"},{"E"}},
-  {{"SW"},{"S"},{"SE"}},
-  {{"MOD"},{""},{"T"}},
+  {{"Q"},{"W"},{"E"}},
+  {{"A"},{"S"},{"D"}},
+  {{"Z"},{"X"},{"C"}},
+  {{"SHI"},{""},{"SPC"}},
 };
 static unsigned long startTime;
 
@@ -259,7 +259,7 @@ void loop() {
           }
           snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
           client.send(buffer);
-          
+
           state = NULL;
         }
       }
