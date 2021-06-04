@@ -237,6 +237,8 @@ void setup() {
   //LED init
   FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalSMD5050 );
   FastLED.setBrightness( BRIGHTNESS );
+
+  FastLED.show();
 }
 
 void loop() {
