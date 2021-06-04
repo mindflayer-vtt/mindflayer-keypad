@@ -149,6 +149,7 @@ time_t lastPong;
 DynamicJsonBuffer jsonBuffer(300);
 
 void onMessageCallback(WebsocketsMessage message) {
+  lastPong = time(nullptr);
   Serial.print("Got Message: ");
   Serial.println(message.data());
   JsonObject& root = jsonBuffer.parseObject(message.data());
