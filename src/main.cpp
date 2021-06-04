@@ -28,10 +28,10 @@ static const byte COLS = 3; //three columns
 static byte rowPins[ROWS] = {5, 4, 0, 2}; //connect to the row pinouts of the kpd
 static byte colPins[COLS] = {14, 12, 13}; //connect to the column pinouts of the kpd
 static KeyState keys[ROWS][COLS] = {
-  {{"NW"},{"N"},{"NE"}},
-  {{"W"},{"TAB"},{"E"}},
-  {{"SW"},{"S"},{"SE"}},
-  {{"MOD"},{""},{"T"}},
+  {{"Q"},{"W"},{"E"}},
+  {{"A"},{"S"},{"D"}},
+  {{"Z"},{"X"},{"C"}},
+  {{"SHI"},{""},{"SPC"}},
 };
 static unsigned long startTime;
 
@@ -149,17 +149,17 @@ time_t lastPong;
 DynamicJsonBuffer jsonBuffer(300);
 
 void onMessageCallback(WebsocketsMessage message) {
-  Serial.print("Got Message: ");
-  Serial.println(message.data());
-  JsonObject& root = jsonBuffer.parseObject(message.data());
-  if(strcmp(root["type"].as<char*>(), "configuration") == 0) {
-    leds[0].r = root["led1"]["r"].as<uint8_t>();
-    leds[0].g = root["led1"]["g"].as<uint8_t>();
-    leds[0].b = root["led1"]["b"].as<uint8_t>();
-    leds[1].r = root["led2"]["r"].as<uint8_t>();
-    leds[1].g = root["led2"]["g"].as<uint8_t>();
-    leds[1].b = root["led2"]["b"].as<uint8_t>();
-  }
+  // Serial.print("Got Message: ");
+  // Serial.println(message.data());
+  // JsonObject& root = jsonBuffer.parseObject(message.data());
+  // if(strcmp(root["type"].as<char*>(), "configuration") == 0) {
+  //   leds[0].r = root["led1"]["r"].as<uint8_t>();
+  //   leds[0].g = root["led1"]["g"].as<uint8_t>();
+  //   leds[0].b = root["led1"]["b"].as<uint8_t>();
+  //   leds[1].r = root["led2"]["r"].as<uint8_t>();
+  //   leds[1].g = root["led2"]["g"].as<uint8_t>();
+  //   leds[1].b = root["led2"]["b"].as<uint8_t>();
+  // }
 }
 
 void onEventsCallback(WebsocketsEvent event, String data) {
@@ -254,10 +254,8 @@ void loop() {
             state = "up";
           }
           snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
-          Serial.print("Sending: ");
-          Serial.println(buffer);
           client.send(buffer);
-          
+
           state = NULL;
         }
       }
@@ -272,6 +270,4 @@ void loop() {
       client.end();
     }
   }
-  FastLED.show();
-  FastLED.delay(8);
 }
