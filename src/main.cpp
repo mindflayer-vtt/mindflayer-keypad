@@ -171,13 +171,34 @@ void onEventsCallback(WebsocketsEvent event, String data) {
     client.send(buffer);
   } else if(event == WebsocketsEvent::ConnectionClosed) {
     Serial.println("Connection Closed: reconnecting");
-    client.connect(websockets_connection_string);
   } else if(event == WebsocketsEvent::GotPing) {
     Serial.println("Got a Ping! sending Pong");
     client.pong();
   } else if(event == WebsocketsEvent::GotPong) {
     lastPong = time(nullptr);
   }
+}
+
+void clientSetup() {
+  // run callback when messages are received
+  client.onMessage(onMessageCallback);
+  
+  // run callback when events are occuring
+  client.onEvent(onEventsCallback);
+
+  // Before connecting, set the ssl certificates and key of the server
+  X509List cert(ca_cert);
+  client.setTrustAnchors(&cert);
+
+  X509List *serverCertList = new X509List(client_cert);
+  PrivateKey *serverPrivKey = new PrivateKey(client_private_key);
+  client.setClientRSACert(serverCertList, serverPrivKey);
+  
+  // Connect to server
+  client.connect(websockets_connection_string);
+
+  // Send a ping
+  client.ping();
 }
 
 void setup() {
@@ -214,25 +235,8 @@ void setup() {
   Serial.println("");
   Serial.println("Time set, connecting to server...");
 
-  // run callback when messages are received
-  client.onMessage(onMessageCallback);
-  
-  // run callback when events are occuring
-  client.onEvent(onEventsCallback);
-
-  // Before connecting, set the ssl certificates and key of the server
-  X509List cert(ca_cert);
-  client.setTrustAnchors(&cert);
-
-  X509List *serverCertList = new X509List(client_cert);
-  PrivateKey *serverPrivKey = new PrivateKey(client_private_key);
-  client.setClientRSACert(serverCertList, serverPrivKey);
-  
-  // Connect to server
-  client.connect(websockets_connection_string);
-
-  // Send a ping
-  client.ping();
+  // Running client setup
+  clientSetup();
 
   startTime = millis();
 
@@ -266,6 +270,9 @@ void loop() {
       digitalWrite(rowPins[x],HIGH);
     }
     startTime = millis();
+  } else if (!client.available() && (millis()-startTime)>100) {
+    client = WebsocketsClient();
+    clientSetup();
   }
   time_t lastPongDiff = (time(nullptr) - lastPong);
   if(lastPongDiff > 15) {
