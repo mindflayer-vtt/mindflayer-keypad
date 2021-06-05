@@ -167,7 +167,7 @@ void onMessageCallback(WebsocketsMessage message) {
 void onEventsCallback(WebsocketsEvent event, String data) {
   if(event == WebsocketsEvent::ConnectionOpened) {
     Serial.println("Connection Opened: registering");
-    snprintf(buffer, BUFFER_SIZE, "{\"type\":\"registration\",\"controller-id\": \"%s\",\"status\":\"connected\",\"receiver\":\"false\"}", name);
+    snprintf(buffer, BUFFER_SIZE, "{\"type\":\"registration\",\"controller-id\": \"%s\",\"status\":\"connected\",\"receiver\":false}", name);
     client.send(buffer);
   } else if(event == WebsocketsEvent::ConnectionClosed) {
     Serial.println("Connection Closed: reconnecting");
