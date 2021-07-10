@@ -22,11 +22,11 @@ You have to have set up the following software in order to compile an flash the 
 
 ## Configuration
 
-1. Edit the platformio.ini file and change the WIFI_SSID, WIFI_PASS and WSS_URL variables
-   ```ini
-   '-DWIFI_SSID="<your ssid>"'
-   '-DWIFI_PASS="<your wifi password>"'
-   '-DWSS_URL="<your websocketserver url>"'
+1. Create a `include/config.h` file and add the WIFI_SSID, WIFI_PASS and WSS_URL variables
+   ```cpp
+   #define WIFI_SSID "<your ssid>"
+   #define WIFI_PASS "<your wifi password>"
+   #define WSS_URL   "<your websocketserver url>"
    ```
 
 ## Flashing

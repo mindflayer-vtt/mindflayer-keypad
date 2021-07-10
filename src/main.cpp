@@ -1,3 +1,4 @@
+#include "config.h"
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoWebsockets.h>
@@ -16,12 +17,12 @@ struct KeyState {
   bool isDown;
 };
 
-const char* ssid = WIFI_SSID; //Enter SSID
-const char* password = WIFI_PASS; //Enter Password
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASS;
 
-const char* websockets_connection_string = WSS_URL; //Enter server adress
+const char* websockets_connection_string = WSS_URL;
 
-const char* name = CTRL_NAME;// enter the name of the controller
+const char* name = ESP_NAME;
 
 static const byte ROWS = 4; //four rows
 static const byte COLS = 3; //three columns
@@ -146,20 +147,20 @@ seoK24dHmt6tWmn/sbxX7Aa6TL/4mVlFoOgcaTJyVaY/BrY=
 
 WebsocketsClient client;
 time_t lastPong;
-DynamicJsonBuffer jsonBuffer(300);
+DynamicJsonDocument jsonDoc(1024);
 
 void onMessageCallback(WebsocketsMessage message) {
   lastPong = time(nullptr);
   Serial.print("Got Message: ");
   Serial.println(message.data());
-  JsonObject& root = jsonBuffer.parseObject(message.data());
-  if(strcmp(root["type"].as<char*>(), "configuration") == 0) {
-    leds[0].r = root["led1"]["r"].as<uint8_t>();
-    leds[0].g = root["led1"]["g"].as<uint8_t>();
-    leds[0].b = root["led1"]["b"].as<uint8_t>();
-    leds[1].r = root["led2"]["r"].as<uint8_t>();
-    leds[1].g = root["led2"]["g"].as<uint8_t>();
-    leds[1].b = root["led2"]["b"].as<uint8_t>();
+  auto error = deserializeJson(jsonDoc, message.data());
+  if(!error && strcmp(jsonDoc["type"].as<char*>(), "configuration") == 0) {
+    leds[0].r = jsonDoc["led1"]["r"].as<uint8_t>();
+    leds[0].g = jsonDoc["led1"]["g"].as<uint8_t>();
+    leds[0].b = jsonDoc["led1"]["b"].as<uint8_t>();
+    leds[1].r = jsonDoc["led2"]["r"].as<uint8_t>();
+    leds[1].g = jsonDoc["led2"]["g"].as<uint8_t>();
+    leds[1].b = jsonDoc["led2"]["b"].as<uint8_t>();
     FastLED.show();
   }
 }
@@ -202,7 +203,9 @@ void setup() {
     delay(1000);
   }
 
-  Serial.println("Successfully connected to WiFi, setting time... ");
+  Serial.print("Successfully connected to WiFi: ");
+  Serial.print(WiFi.localIP());
+  Serial.println();
 
   // We configure ESP8266's time, as we need it to validate the certificates
   configTime(2 * 3600, 1, ntp1, ntp2);
@@ -212,7 +215,7 @@ void setup() {
       now = time(nullptr);
   }
   Serial.println("");
-  Serial.println("Time set, connecting to server...");
+  Serial.println("Time set...");
 
   // run callback when messages are received
   client.onMessage(onMessageCallback);
@@ -234,6 +237,8 @@ void setup() {
   // Send a ping
   client.ping();
 
+  Serial.println("WebSocket connected...");
+
   startTime = millis();
 
   //LED init
@@ -241,6 +246,11 @@ void setup() {
   FastLED.setBrightness( BRIGHTNESS );
 
   FastLED.show();
+
+  Serial.println("LEDs activated");
+
+  Serial.println("booted!");
+  Serial.println();
 }
 
 void loop() {
