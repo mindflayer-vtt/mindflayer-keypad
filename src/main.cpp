@@ -7,8 +7,10 @@
 
 using namespace websockets;
 
-struct KeyState {
-  KeyState(const char *setKey) {
+struct KeyState
+{
+  KeyState(const char *setKey)
+  {
     strncpy(this->key, setKey, 3);
     this->key[3] = 0;
     this->isDown = false;
@@ -24,19 +26,19 @@ const char* websockets_connection_string = WSS_URL;
 
 const char* name = ESP_NAME;
 
-static const byte ROWS = 4; //four rows
-static const byte COLS = 3; //three columns
+static const byte ROWS = 4;               //four rows
+static const byte COLS = 3;               //three columns
 static byte rowPins[ROWS] = {5, 4, 0, 2}; //connect to the row pinouts of the kpd
 static byte colPins[COLS] = {14, 12, 13}; //connect to the column pinouts of the kpd
 static KeyState keys[ROWS][COLS] = {
-  {{"Q"},{"W"},{"E"}},
-  {{"A"},{"S"},{"D"}},
-  {{"Z"},{"X"},{"C"}},
-  {{"SHI"},{""},{"SPC"}},
+    {{"Q"}, {"W"}, {"E"}},
+    {{"A"}, {"S"}, {"D"}},
+    {{"Z"}, {"X"}, {"C"}},
+    {{"SHI"}, {""}, {"SPC"}},
 };
 static unsigned long startTime;
 
-
+static const int DEBOUNCE_TIME = 5; // 5ms
 static const int BUFFER_SIZE = 300;
 static char buffer[BUFFER_SIZE];
 
@@ -46,15 +48,15 @@ const char *ntp2 = "pool.ntp.org";
 time_t now;
 
 /* LEDs*/
-#define LED_PIN     3
+#define LED_PIN 3
 
 // Information about the LED strip itself
-#define NUM_LEDS    2
-#define CHIPSET     WS2811
+#define NUM_LEDS 2
+#define CHIPSET WS2811
 #define COLOR_ORDER GRB
 CRGB leds[NUM_LEDS];
 
-#define BRIGHTNESS  128
+#define BRIGHTNESS 128
 
 // The hardcoded certificate authority for this example.
 // Don't use it on your own apps!!!!!
@@ -149,7 +151,8 @@ WebsocketsClient client;
 time_t lastPong;
 DynamicJsonDocument jsonDoc(1024);
 
-void onMessageCallback(WebsocketsMessage message) {
+void onMessageCallback(WebsocketsMessage message)
+{
   lastPong = time(nullptr);
   Serial.print("Got Message: ");
   Serial.println(message.data());
@@ -165,61 +168,34 @@ void onMessageCallback(WebsocketsMessage message) {
   }
 }
 
-void onEventsCallback(WebsocketsEvent event, String data) {
-  if(event == WebsocketsEvent::ConnectionOpened) {
+void onEventsCallback(WebsocketsEvent event, String data)
+{
+  if (event == WebsocketsEvent::ConnectionOpened)
+  {
     Serial.println("Connection Opened: registering");
     snprintf(buffer, BUFFER_SIZE, "{\"type\":\"registration\",\"controller-id\": \"%s\",\"status\":\"connected\",\"receiver\":false}", name);
     client.send(buffer);
-  } else if(event == WebsocketsEvent::ConnectionClosed) {
+  }
+  else if (event == WebsocketsEvent::ConnectionClosed)
+  {
     Serial.println("Connection Closed: reconnecting");
-    client.connect(websockets_connection_string);
-  } else if(event == WebsocketsEvent::GotPing) {
+  }
+  else if (event == WebsocketsEvent::GotPing)
+  {
     Serial.println("Got a Ping! sending Pong");
     client.pong();
-  } else if(event == WebsocketsEvent::GotPong) {
+  }
+  else if (event == WebsocketsEvent::GotPong)
+  {
     lastPong = time(nullptr);
   }
 }
 
-void setup() {
-  Serial.begin(115200);
-  // Connect to wifi
-  WiFi.begin(ssid, password);
-
-  Serial.println("Connecting to WiFi...");
-
-  for(int i = 0; i < COLS; i++) {
-    pinMode(colPins[i],INPUT_PULLUP);
-  }
-  for(int i = 0; i < ROWS; i++) {
-    pinMode(rowPins[i],OUTPUT);
-    digitalWrite(rowPins[i],HIGH);
-  }
-
-
-  // Wait until we are connected to WiFi
-  while(WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(1000);
-  }
-
-  Serial.print("Successfully connected to WiFi: ");
-  Serial.print(WiFi.localIP());
-  Serial.println();
-
-  // We configure ESP8266's time, as we need it to validate the certificates
-  configTime(2 * 3600, 1, ntp1, ntp2);
-  while(now < 2 * 3600) {
-      Serial.print(".");
-      delay(500);
-      now = time(nullptr);
-  }
-  Serial.println("");
-  Serial.println("Time set...");
-
+void clientSetup()
+{
   // run callback when messages are received
   client.onMessage(onMessageCallback);
-  
+
   // run callback when events are occuring
   client.onEvent(onEventsCallback);
 
@@ -230,20 +206,64 @@ void setup() {
   X509List *serverCertList = new X509List(client_cert);
   PrivateKey *serverPrivKey = new PrivateKey(client_private_key);
   client.setClientRSACert(serverCertList, serverPrivKey);
-  
+
   // Connect to server
   client.connect(websockets_connection_string);
 
   // Send a ping
   client.ping();
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  // Connect to wifi
+  WiFi.begin(ssid, password);
+
+  Serial.println("Connecting to WiFi...");
+
+  for (int i = 0; i < COLS; i++)
+  {
+    pinMode(colPins[i], INPUT_PULLUP);
+  }
+  for (int i = 0; i < ROWS; i++)
+  {
+    pinMode(rowPins[i], OUTPUT);
+    digitalWrite(rowPins[i], HIGH);
+  }
+
+  // Wait until we are connected to WiFi
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+
+  Serial.print("Successfully connected to WiFi: ");
+  Serial.print(WiFi.localIP());
+  Serial.println();
+
+  // We configure ESP8266's time, as we need it to validate the certificates
+  configTime(2 * 3600, 1, ntp1, ntp2);
+  while (now < 2 * 3600)
+  {
+    Serial.print(".");
+    delay(500);
+    now = time(nullptr);
+  }
+  Serial.println("");
+  Serial.println("Time set...");
+
+  // Running client setup
+  clientSetup();
 
   Serial.println("WebSocket connected...");
 
   startTime = millis();
 
   //LED init
-  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalSMD5050 );
-  FastLED.setBrightness( BRIGHTNESS );
+  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
+  FastLED.setBrightness(BRIGHTNESS);
 
   FastLED.show();
 
@@ -253,18 +273,26 @@ void setup() {
   Serial.println();
 }
 
-void loop() {
-  const char* state = NULL;
+void loop()
+{
+  const char *state = NULL;
   client.poll();
-  if (client.available() && (millis()-startTime)>100) {
-    for(int x = 0; x < ROWS; x++) {
-      digitalWrite(rowPins[x],LOW);
-      for(int y = 0; y < COLS; y++) {
-        if(keys[x][y].isDown == digitalRead(colPins[y])) {
+  if (client.available() && (millis() - startTime) > DEBOUNCE_TIME)
+  {
+    for (int x = 0; x < ROWS; x++)
+    {
+      digitalWrite(rowPins[x], LOW);
+      for (int y = 0; y < COLS; y++)
+      {
+        if (keys[x][y].isDown == digitalRead(colPins[y]))
+        {
           keys[x][y].isDown = !keys[x][y].isDown;
-          if(keys[x][y].isDown) {
+          if (keys[x][y].isDown)
+          {
             state = "down";
-          } else {
+          }
+          else
+          {
             state = "up";
           }
           snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
@@ -273,14 +301,21 @@ void loop() {
           state = NULL;
         }
       }
-      digitalWrite(rowPins[x],HIGH);
+      digitalWrite(rowPins[x], HIGH);
     }
     startTime = millis();
   }
+  else if (!client.available() && (millis() - startTime) > 100)
+  {
+    client = WebsocketsClient();
+    clientSetup();
+  }
   time_t lastPongDiff = (time(nullptr) - lastPong);
-  if(lastPongDiff > 15) {
+  if (lastPongDiff > 15)
+  {
     client.ping();
-    if(lastPongDiff > 20) {
+    if (lastPongDiff > 20)
+    {
       client.end();
     }
   }
