@@ -4,20 +4,14 @@
 #include <ArduinoWebsockets.h>
 #include <FastLED.h>
 #include <ArduinoJson.h>
+#include <ArduinoOTA.h>
+#include <ESP8266mDNS.h>
+#include <KeyboardMatrix.h>
+
 
 using namespace websockets;
+using namespace com::viromania::vtt::wss;
 
-struct KeyState
-{
-  KeyState(const char *setKey)
-  {
-    strncpy(this->key, setKey, 3);
-    this->key[3] = 0;
-    this->isDown = false;
-  }
-  char key[4];
-  bool isDown;
-};
 
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASS;
@@ -26,19 +20,6 @@ const char* websockets_connection_string = WSS_URL;
 
 const char* name = ESP_NAME;
 
-static const byte ROWS = 4;               //four rows
-static const byte COLS = 3;               //three columns
-static byte rowPins[ROWS] = {5, 4, 0, 2}; //connect to the row pinouts of the kpd
-static byte colPins[COLS] = {14, 12, 13}; //connect to the column pinouts of the kpd
-static KeyState keys[ROWS][COLS] = {
-    {{"Q"}, {"W"}, {"E"}},
-    {{"A"}, {"S"}, {"D"}},
-    {{"Z"}, {"X"}, {"C"}},
-    {{"SHI"}, {""}, {"SPC"}},
-};
-static unsigned long startTime;
-
-static const int DEBOUNCE_TIME = 5; // 5ms
 static const int BUFFER_SIZE = 300;
 static char buffer[BUFFER_SIZE];
 
@@ -148,11 +129,33 @@ seoK24dHmt6tWmn/sbxX7Aa6TL/4mVlFoOgcaTJyVaY/BrY=
 )EOF";
 
 WebsocketsClient client;
+boolean reconnect = false;
 time_t lastPong;
 DynamicJsonDocument jsonDoc(1024);
 
-void onMessageCallback(WebsocketsMessage message)
-{
+void waitForWiFi() {
+  while(WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println();
+  Serial.print("Successfully connected to WiFi: ");
+  Serial.print(WiFi.localIP());
+  Serial.println();
+}
+
+void configureTime() {
+  configTime(2 * 3600, 1, ntp1, ntp2);
+  while(now < 2 * 3600) {
+      Serial.print(".");
+      delay(500);
+      now = time(nullptr);
+  }
+  Serial.println("");
+  Serial.println("Time set...");
+}
+
+void onMessageCallback(WebsocketsMessage message) {
   lastPong = time(nullptr);
   Serial.print("Got Message: ");
   Serial.println(message.data());
@@ -179,6 +182,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
   else if (event == WebsocketsEvent::ConnectionClosed)
   {
     Serial.println("Connection Closed: reconnecting");
+    reconnect = true;
   }
   else if (event == WebsocketsEvent::GotPing)
   {
@@ -191,11 +195,10 @@ void onEventsCallback(WebsocketsEvent event, String data)
   }
 }
 
-void clientSetup()
-{
+void setupWebSocket() {
   // run callback when messages are received
   client.onMessage(onMessageCallback);
-
+  
   // run callback when events are occuring
   client.onEvent(onEventsCallback);
 
@@ -212,103 +215,116 @@ void clientSetup()
 
   // Send a ping
   client.ping();
+
+  Serial.println("WebSocket connected");
 }
 
-void setup()
-{
+void setupLEDs() {
+  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalSMD5050 );
+  FastLED.setBrightness( BRIGHTNESS );
+
+  FastLED.show();
+
+  Serial.println("LEDs activated");
+}
+
+void setupOTA() {
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+    else // U_SPIFFS
+        type = "filesystem";
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
+    // using SPIFFS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) {
+      Serial.println("Auth Failed");
+      return;
+    }
+    else if (error == OTA_BEGIN_ERROR){
+      Serial.println("Begin Failed");
+      return;
+    }
+    else if (error == OTA_CONNECT_ERROR)
+      Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR)
+      Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR)
+      Serial.println("End Failed");
+
+    ESP.restart();
+  });
+
+  ArduinoOTA.setHostname(name);
+  ArduinoOTA.begin();
+  MDNS.addService("ota", "tcp", 8266);
+  Serial.println("OTA is setup ");
+  Serial.println(WiFi.hostname());
+  Serial.println(WiFi.localIP());
+
+}
+
+void setup() {
   Serial.begin(115200);
+
+  WiFi.hostname(name);
+
   // Connect to wifi
   WiFi.begin(ssid, password);
 
   Serial.println("Connecting to WiFi...");
 
-  for (int i = 0; i < COLS; i++)
-  {
-    pinMode(colPins[i], INPUT_PULLUP);
-  }
-  for (int i = 0; i < ROWS; i++)
-  {
-    pinMode(rowPins[i], OUTPUT);
-    digitalWrite(rowPins[i], HIGH);
-  }
-
   // Wait until we are connected to WiFi
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print(".");
-    delay(1000);
-  }
+  waitForWiFi();
 
-  Serial.print("Successfully connected to WiFi: ");
-  Serial.print(WiFi.localIP());
-  Serial.println();
+  setupOTA();
 
   // We configure ESP8266's time, as we need it to validate the certificates
-  configTime(2 * 3600, 1, ntp1, ntp2);
-  while (now < 2 * 3600)
-  {
-    Serial.print(".");
-    delay(500);
-    now = time(nullptr);
-  }
-  Serial.println("");
-  Serial.println("Time set...");
+  configureTime();
 
-  // Running client setup
-  clientSetup();
+  KeyboardMatrix::initMatrix();
 
-  Serial.println("WebSocket connected...");
-
-  startTime = millis();
+  setupWebSocket();
 
   //LED init
-  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
-  FastLED.setBrightness(BRIGHTNESS);
-
-  FastLED.show();
-
-  Serial.println("LEDs activated");
+  setupLEDs();
 
   Serial.println("booted!");
   Serial.println();
 }
 
-void loop()
-{
-  const char *state = NULL;
-  client.poll();
-  if (client.available() && (millis() - startTime) > DEBOUNCE_TIME)
-  {
-    for (int x = 0; x < ROWS; x++)
-    {
-      digitalWrite(rowPins[x], LOW);
-      for (int y = 0; y < COLS; y++)
-      {
-        if (keys[x][y].isDown == digitalRead(colPins[y]))
-        {
-          keys[x][y].isDown = !keys[x][y].isDown;
-          if (keys[x][y].isDown)
-          {
-            state = "down";
-          }
-          else
-          {
-            state = "up";
-          }
-          snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, keys[x][y].key, state);
-          client.send(buffer);
-
-          state = NULL;
-        }
-      }
-      digitalWrite(rowPins[x], HIGH);
-    }
-    startTime = millis();
+void onKeyChange(KeyboardMatrix::KeyState *key) {
+  const char* state = NULL;
+  if(key->isDown) {
+    state = "down";
+  } else {
+    state = "up";
   }
-  else if (!client.available() && (millis() - startTime) > 100)
+  snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, key->key, state);
+  client.send(buffer);
+  Serial.println(key->key);
+}
+
+void loop() {
+  ArduinoOTA.handle();
+  client.poll();
+  if (client.available()) {
+    KeyboardMatrix::detectKeys(onKeyChange);
+  }
+  else if (!client.available() && reconnect)
   {
+    reconnect = false;
     client = WebsocketsClient();
-    clientSetup();
+    setupWebSocket();
   }
   time_t lastPongDiff = (time(nullptr) - lastPong);
   if (lastPongDiff > 15)
