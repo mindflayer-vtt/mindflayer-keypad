@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoWebsockets.h>
-#include <FastLED.h>
+#include <NeoPixelBus.h>
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <ESP8266mDNS.h>
@@ -33,9 +33,6 @@ time_t now;
 
 // Information about the LED strip itself
 #define NUM_LEDS 2
-#define CHIPSET WS2811
-#define COLOR_ORDER GRB
-CRGB leds[NUM_LEDS];
 
 #define BRIGHTNESS 128
 
@@ -133,6 +130,9 @@ boolean reconnect = false;
 time_t lastPong;
 DynamicJsonDocument jsonDoc(1024);
 
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> ledStrip(NUM_LEDS);
+RgbColor leds[NUM_LEDS];
+
 void waitForWiFi() {
   while(WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
@@ -161,13 +161,15 @@ void onMessageCallback(WebsocketsMessage message) {
   Serial.println(message.data());
   auto error = deserializeJson(jsonDoc, message.data());
   if(!error && strcmp(jsonDoc["type"].as<char*>(), "configuration") == 0) {
-    leds[0].r = jsonDoc["led1"]["r"].as<uint8_t>();
-    leds[0].g = jsonDoc["led1"]["g"].as<uint8_t>();
-    leds[0].b = jsonDoc["led1"]["b"].as<uint8_t>();
-    leds[1].r = jsonDoc["led2"]["r"].as<uint8_t>();
-    leds[1].g = jsonDoc["led2"]["g"].as<uint8_t>();
-    leds[1].b = jsonDoc["led2"]["b"].as<uint8_t>();
-    FastLED.show();
+    leds[0].R = jsonDoc["led1"]["r"].as<uint8_t>();
+    leds[0].G = jsonDoc["led1"]["g"].as<uint8_t>();
+    leds[0].B = jsonDoc["led1"]["b"].as<uint8_t>();
+    ledStrip.SetPixelColor(0, leds[0]);
+    leds[1].R = jsonDoc["led2"]["r"].as<uint8_t>();
+    leds[1].G = jsonDoc["led2"]["g"].as<uint8_t>();
+    leds[1].B = jsonDoc["led2"]["b"].as<uint8_t>();
+    ledStrip.SetPixelColor(1, leds[1]);
+    ledStrip.Show();
   }
 }
 
@@ -220,10 +222,8 @@ void setupWebSocket() {
 }
 
 void setupLEDs() {
-  FastLED.addLeds<CHIPSET, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalSMD5050 );
-  FastLED.setBrightness( BRIGHTNESS );
-
-  FastLED.show();
+  ledStrip.Begin();
+  ledStrip.Show();
 
   Serial.println("LEDs activated");
 }
@@ -276,6 +276,8 @@ void setupOTA() {
 void setup() {
   Serial.begin(115200);
 
+  setupLEDs();
+
   WiFi.hostname(name);
 
   // Connect to wifi
@@ -294,9 +296,6 @@ void setup() {
   KeyboardMatrix::initMatrix();
 
   setupWebSocket();
-
-  //LED init
-  setupLEDs();
 
   Serial.println("booted!");
   Serial.println();
