@@ -35,5 +35,8 @@
 .pio
 .venv
 
+# VSCode
+.vscode
+
 # Config
 include/config.h
