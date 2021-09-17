@@ -1,4 +1,5 @@
-# Keyboard Standalone Software
+# mindflayer-keypad
+Firmware for an ESP8266 based keypad that can be used with the Mind Flayer VTT module &amp; server
 
 ## Requirements
 You have to have set up the following software in order to compile an flash the controller:
