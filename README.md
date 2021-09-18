@@ -1,4 +1,8 @@
-# mindflayer-keypad
+<div align="center">
+<img width="460" src="https://raw.githubusercontent.com/shawly/mindflayer-keypad/main/.github/foundryvtt-mindflayer-logo.png">
+</div>
+
+# Mind Flayer - Keypad
 Firmware for an ESP8266 based keypad that can be used with the Mind Flayer VTT module &amp; server
 
 ## Requirements
