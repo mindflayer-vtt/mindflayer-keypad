@@ -1,5 +1,5 @@
 <div align="center">
-<img width="460" src="https://raw.githubusercontent.com/shawly/mindflayer-keypad/main/.github/foundryvtt-mindflayer-logo.png">
+<img width="460" src="https://raw.githubusercontent.com/mindflayer-vtt/mindflayer-keypad/main/.github/foundryvtt-mindflayer-logo.png">
 </div>
 
 # Mind Flayer - Keypad

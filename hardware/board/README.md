@@ -10,7 +10,7 @@ Both the Schematic and the PCB of the original Batch were made using [EasyEDA](h
 
 ## Things to improve
 
- - [ ] like mentioned in the [README for the case](https://github.com/shawly/mindflayer-keypad/tree/main/hardware/case) the Wemos could be moved to another position to get a better finish, though this is just for aesthetics
+ - [ ] like mentioned in the [README for the case](https://github.com/mindflayer-vtt/mindflayer-keypad/tree/main/hardware/case) the Wemos could be moved to another position to get a better finish, though this is just for aesthetics
  - [ ] the PCB would have enough space for a charging circuit and the case has enough room inside to fit a 2000mAh battery or even bigger
    - with the estimated draw of 77mA for the Wemos D1 and a maximum of 33mA per WS2812b LED a 2000mAh battery would last approx. ~13 hours which is more than enough for a D&D session if the keypads are fully charged
  - [ ] the ESP8266 could be integrated into the PCB, but the difficulty for soldering the chip would greatly increase as well as the cost if you wanted the ESP preassembled by the manufacturer so we decided against this
