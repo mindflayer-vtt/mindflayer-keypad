@@ -2,7 +2,18 @@
 
 Both the Schematic and the PCB of the original Batch were made using [EasyEDA](https://easyeda.com/) and produced at [JLCPCB](https://jlcpcb.com/) with the top side populated during manufacturing.
 
-## Materials required
+## Board images
+
+Here are some renders of the board:
+
+<div align="center">
+<img width="460" src="https://raw.githubusercontent.com/mindflayer-vtt/mindflayer-keypad/main/.github/board-top.png">
+<p>Top Side</p>
+<img width="460" src="https://raw.githubusercontent.com/mindflayer-vtt/mindflayer-keypad/main/.github/board-bottom.png">
+<p>Bottom Side</p>
+</div>
+
+## Additional Materials required
 
  - any Wemos D1 Mini revision
  - a 470µF electrolytic capacitor for the bottom
