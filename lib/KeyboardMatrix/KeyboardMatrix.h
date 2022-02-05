@@ -6,6 +6,8 @@ namespace com { namespace viromania { namespace vtt { namespace wss { namespace 
     bool isDown;
   };
 
+  KeyState (*getState())[4][3];
+
   void initMatrix();
   void detectKeys(void (*callback)(KeyState *key));
 }}}}}

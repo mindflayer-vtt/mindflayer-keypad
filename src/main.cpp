@@ -155,21 +155,32 @@ void configureTime() {
   Serial.println("Time set...");
 }
 
+void setColors(uint8_t r1, uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2, uint8_t b2) {
+  leds[0].R = r1;
+  leds[0].G = g1;
+  leds[0].B = b1;
+  ledStrip.SetPixelColor(0, leds[0]);
+  leds[1].R = r2;
+  leds[1].G = g2;
+  leds[1].B = b2;
+  ledStrip.SetPixelColor(1, leds[1]);
+  ledStrip.Show();
+}
+
 void onMessageCallback(WebsocketsMessage message) {
   lastPong = time(nullptr);
   Serial.print("Got Message: ");
   Serial.println(message.data());
   auto error = deserializeJson(jsonDoc, message.data());
   if(!error && strcmp(jsonDoc["type"].as<char*>(), "configuration") == 0) {
-    leds[0].R = jsonDoc["led1"]["r"].as<uint8_t>();
-    leds[0].G = jsonDoc["led1"]["g"].as<uint8_t>();
-    leds[0].B = jsonDoc["led1"]["b"].as<uint8_t>();
-    ledStrip.SetPixelColor(0, leds[0]);
-    leds[1].R = jsonDoc["led2"]["r"].as<uint8_t>();
-    leds[1].G = jsonDoc["led2"]["g"].as<uint8_t>();
-    leds[1].B = jsonDoc["led2"]["b"].as<uint8_t>();
-    ledStrip.SetPixelColor(1, leds[1]);
-    ledStrip.Show();
+    setColors(
+      jsonDoc["led1"]["r"].as<uint8_t>(),
+      jsonDoc["led1"]["g"].as<uint8_t>(),
+      jsonDoc["led1"]["b"].as<uint8_t>(),
+      jsonDoc["led2"]["r"].as<uint8_t>(),
+      jsonDoc["led2"]["g"].as<uint8_t>(),
+      jsonDoc["led2"]["b"].as<uint8_t>()
+    );
   }
 }
 
@@ -180,10 +191,12 @@ void onEventsCallback(WebsocketsEvent event, String data)
     Serial.println("Connection Opened: registering");
     snprintf(buffer, BUFFER_SIZE, "{\"type\":\"registration\",\"controller-id\": \"%s\",\"status\":\"connected\",\"receiver\":false}", name);
     client.send(buffer);
+    setColors(0, 255, 0, 0, 0, 0);
   }
   else if (event == WebsocketsEvent::ConnectionClosed)
   {
     Serial.println("Connection Closed: reconnecting");
+    setColors(255, 255, 0, 0, 0, 0);
     reconnect = true;
   }
   else if (event == WebsocketsEvent::GotPing)
@@ -223,7 +236,7 @@ void setupWebSocket() {
 
 void setupLEDs() {
   ledStrip.Begin();
-  ledStrip.Show();
+  setColors(255, 0, 0, 0, 0, 0);
 
   Serial.println("LEDs activated");
 }
@@ -284,6 +297,7 @@ void setup() {
   WiFi.begin(ssid, password);
 
   Serial.println("Connecting to WiFi...");
+  setColors(255, 255, 0, 0, 0, 0);
 
   // Wait until we are connected to WiFi
   waitForWiFi();
@@ -313,11 +327,21 @@ void onKeyChange(KeyboardMatrix::KeyState *key) {
   Serial.println(key->key);
 }
 
+void handleRestartRequest() {
+  auto state = KeyboardMatrix::getState();
+  if((*state)[0][0].isDown && (*state)[3][0].isDown && (*state)[3][2].isDown) {
+    Serial.println("Restarting... ");
+    client.close(websockets::CloseReason::CloseReason_GoingAway);
+    ESP.restart();
+  }
+}
+
 void loop() {
   ArduinoOTA.handle();
   client.poll();
   if (client.available()) {
     KeyboardMatrix::detectKeys(onKeyChange);
+    handleRestartRequest();
   }
   else if (!client.available() && reconnect)
   {

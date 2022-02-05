@@ -50,3 +50,7 @@ void KeyboardMatrix::detectKeys(void (*callback)(KeyState *key)) {
   }
   startTime = millis();
 }
+
+KeyboardMatrix::KeyState (*KeyboardMatrix::getState())[4][3] {
+  return &keys;
+}
