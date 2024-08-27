@@ -1,5 +1,6 @@
 #include "config.h"
 #include "KeyboardMatrix.h"
+#include <xtensa/config/core.h>
 #include <Arduino.h>
 
 using namespace com::viromania::vtt::wss;
