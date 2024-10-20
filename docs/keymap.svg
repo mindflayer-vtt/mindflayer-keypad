@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="199.78821mm"
+   height="155.18793mm"
+   viewBox="0 0 199.78821 155.18793"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25, custom)"
+   sodipodi:docname="keymap.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showguides="true"
+     inkscape:zoom="1.0973349"
+     inkscape:cx="385.02376"
+     inkscape:cy="234.65945"
+     inkscape:window-width="1920"
+     inkscape:window-height="1050"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="g47">
+    <sodipodi:guide
+       position="90.36831,280.09825"
+       orientation="0,-1"
+       id="guide19"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="55.758093,282.14417"
+       orientation="1,0"
+       id="guide20"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="75.956268,281.80651"
+       orientation="1,0"
+       id="guide21"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="97.699535,282.48516"
+       orientation="1,0"
+       id="guide22"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="60.190928,258.95703"
+       orientation="0,-1"
+       id="guide23"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="94.630652,238.1568"
+       orientation="0,-1"
+       id="guide24"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <rect
+       x="862.8042"
+       y="586.62726"
+       width="39.584541"
+       height="175.2328"
+       id="rect45" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-3.4032147,-23.675743)">
+    <g
+       id="g47"
+       inkscape:label="Explanation">
+      <text
+         xml:space="preserve"
+         style="font-size:3.88056px;fill:#000000;stroke-width:0.264583"
+         x="128.28979"
+         y="30.084898"
+         id="text9-2"
+         inkscape:label="Keymap"><tspan
+           sodipodi:role="line"
+           id="tspan9-9"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="30.084898">Q - Switch Character</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="34.935596"
+           id="tspan24">W - Move Forward</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="39.786297"
+           id="tspan25">E - Open Doors</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="44.636997"
+           id="tspan26">A - Move Left</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="49.487698"
+           id="tspan27">S - Move Backward</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="54.338398"
+           id="tspan28">D - Move Right</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="59.189098"
+           id="tspan29">X - Toggle Torch</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="64.039795"
+           id="tspan30">SHIFT-C - Change keyboard orientation</tspan><tspan
+           sodipodi:role="line"
+           style="font-size:3.88056px;stroke-width:0.264583"
+           x="128.28979"
+           y="68.890495"
+           id="tspan31">SHIFT-SPACE-E - Reboot keyboard</tspan></text>
+      <g
+         id="g46"
+         inkscape:label="Keyboard">
+        <rect
+           style="fill:#e6e6e6;stroke-width:0.236633"
+           id="rect1"
+           width="124.00086"
+           height="88.307732"
+           x="3.5751278"
+           y="23.675743" />
+        <rect
+           style="fill:#999999;stroke-width:0.374177"
+           id="rect5-8-2"
+           width="40"
+           height="20"
+           x="85.724869"
+           y="88.652756" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-8"
+           width="20"
+           height="20"
+           x="35.834953"
+           y="67.847321" />
+        <rect
+           style="fill:#999999;stroke-width:0.324047"
+           id="rect5-8-3"
+           width="30"
+           height="20"
+           x="4.8919935"
+           y="67.738419" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-2-7"
+           width="20"
+           height="20"
+           x="56.82423"
+           y="67.792038" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-7-9"
+           width="20"
+           height="20"
+           x="77.690498"
+           y="67.82766" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5"
+           width="20"
+           height="20"
+           x="35.778755"
+           y="25.813574" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-2"
+           width="20"
+           height="20"
+           x="56.768032"
+           y="25.758289" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-7"
+           width="20"
+           height="20"
+           x="77.589684"
+           y="25.941103" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-6"
+           width="20"
+           height="20"
+           x="35.764507"
+           y="46.832836" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-2-0"
+           width="20"
+           height="20"
+           x="56.753788"
+           y="46.77755" />
+        <rect
+           style="fill:#999999;stroke-width:0.264583"
+           id="rect5-7-6"
+           width="20"
+           height="20"
+           x="77.575439"
+           y="46.960365" />
+        <path
+           sodipodi:type="star"
+           style="fill:#ff0000;stroke-width:0.264583"
+           id="path6"
+           inkscape:flatsided="false"
+           sodipodi:sides="5"
+           sodipodi:cx="47.501137"
+           sodipodi:cy="48.245716"
+           sodipodi:r1="2.1624205"
+           sodipodi:r2="1.0812103"
+           sodipodi:arg1="1.1167903"
+           sodipodi:arg2="1.7451088"
+           inkscape:rounded="0"
+           inkscape:randomized="0"
+           d="m 48.449508,50.189078 -1.135887,-0.878536 -1.367668,0.43766 0.484529,-1.351774 -0.838873,-1.165486 1.435342,0.04309 0.849217,-1.15797 0.402561,1.378408 1.363717,0.44982 -1.186545,0.80881 z"
+           inkscape:transform-center-x="-0.11589033"
+           inkscape:transform-center-y="-0.093145366"
+           transform="translate(-15.536814,-2.1041006)" />
+        <path
+           sodipodi:type="star"
+           style="fill:#ff0000;stroke-width:0.264583"
+           id="path6-7"
+           inkscape:flatsided="false"
+           sodipodi:sides="5"
+           sodipodi:cx="47.501137"
+           sodipodi:cy="48.245716"
+           sodipodi:r1="2.1624205"
+           sodipodi:r2="1.0812103"
+           sodipodi:arg1="1.1167903"
+           sodipodi:arg2="1.7451088"
+           inkscape:rounded="0"
+           inkscape:randomized="0"
+           d="m 48.449508,50.189078 -1.135887,-0.878536 -1.367668,0.43766 0.484529,-1.351774 -0.838873,-1.165486 1.435342,0.04309 0.849217,-1.15797 0.402561,1.378408 1.363717,0.44982 -1.186545,0.80881 z"
+           inkscape:transform-center-x="-0.11589033"
+           inkscape:transform-center-y="-0.093145366"
+           transform="translate(53.553006,-1.4541827)" />
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="11.531056"
+           y="48.837547"
+           id="text6"><tspan
+             sodipodi:role="line"
+             style="font-size:7.05556px;stroke-width:0.264583"
+             x="11.531056"
+             y="48.837547"
+             id="tspan7">LED1</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="103.42649"
+           y="49.633408"
+           id="text8"><tspan
+             sodipodi:role="line"
+             id="tspan8"
+             style="font-size:7.05556px;stroke-width:0.264583"
+             x="103.42649"
+             y="49.633408">LED2</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="43.229553"
+           y="38.26561"
+           id="text9"><tspan
+             sodipodi:role="line"
+             id="tspan9"
+             style="font-size:7.05556px;stroke-width:0.264583"
+             x="43.229553"
+             y="38.26561">Q</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="63.023106"
+           y="38.267315"
+           id="text10"><tspan
+             sodipodi:role="line"
+             id="tspan10"
+             style="stroke-width:0.264583"
+             x="63.023106"
+             y="38.267315">W</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="85.189285"
+           y="38.296612"
+           id="text11"><tspan
+             sodipodi:role="line"
+             id="tspan11"
+             style="stroke-width:0.264583"
+             x="85.189285"
+             y="38.296612">E</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="43.337448"
+           y="59.482452"
+           id="text12"><tspan
+             sodipodi:role="line"
+             id="tspan12"
+             style="stroke-width:0.264583"
+             x="43.337448"
+             y="59.482452">A</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="64.001671"
+           y="59.293312"
+           id="text13"><tspan
+             sodipodi:role="line"
+             id="tspan13"
+             style="stroke-width:0.264583"
+             x="64.001671"
+             y="59.293312">S</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="84.749435"
+           y="59.490074"
+           id="text14"><tspan
+             sodipodi:role="line"
+             id="tspan14"
+             style="stroke-width:0.264583"
+             x="84.749435"
+             y="59.490074">D</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="43.73172"
+           y="80.155098"
+           id="text15"><tspan
+             sodipodi:role="line"
+             id="tspan15"
+             style="stroke-width:0.264583"
+             x="43.73172"
+             y="80.155098">Y</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="64.252899"
+           y="80.211716"
+           id="text16"><tspan
+             sodipodi:role="line"
+             id="tspan16"
+             style="stroke-width:0.264583"
+             x="64.252899"
+             y="80.211716">X</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="84.973885"
+           y="80.181076"
+           id="text17"><tspan
+             sodipodi:role="line"
+             id="tspan17"
+             style="stroke-width:0.264583"
+             x="84.973885"
+             y="80.181076">C</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="9.7368784"
+           y="80.08651"
+           id="text18"><tspan
+             sodipodi:role="line"
+             id="tspan18"
+             style="stroke-width:0.264583"
+             x="9.7368784"
+             y="80.08651">SHIFT</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-size:7.05556px;fill:#000000;stroke-width:0.264583"
+           x="94.404976"
+           y="101.40022"
+           id="text19"><tspan
+             sodipodi:role="line"
+             id="tspan19"
+             style="stroke-width:0.264583"
+             x="94.404976"
+             y="101.40022">SPACE</tspan></text>
+      </g>
+      <text
+         xml:space="preserve"
+         style="font-size:3.88056px;fill:#999999;stroke-width:0.264583"
+         x="3.4032147"
+         y="119.66326"
+         id="text32"
+         inkscape:label="LEDs"><tspan
+           sodipodi:role="line"
+           id="tspan32"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="119.66326">LEDs</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="124.51894"
+           id="tspan33">   1   |  2  | Meaning</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="129.37462"
+           id="tspan34">Red    | Off | Booting</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="134.2303"
+           id="tspan35">Yellow | Off | Connected to WiFi</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="139.08598"
+           id="tspan36">Green  | Off | Connected to VTT Relay</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="143.94167"
+           id="tspan44" /><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="148.79735"
+           id="tspan37">Out of Combat:</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="153.65303"
+           id="tspan43">both LEDs show player configured color</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="158.5087"
+           id="tspan38" /><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="163.36438"
+           id="tspan45">In Combat:</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="168.22006"
+           id="tspan39">Player color | Red    | It is your turn</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="173.07574"
+           id="tspan40">Player color | Yellow | You are the next player in Initiative Order</tspan><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Droid Sans Mono';-inkscape-font-specification:'Droid Sans Mono';fill:#000000;stroke-width:0.264583"
+           x="3.4032147"
+           y="177.93143"
+           id="tspan42">Player color | Green  | Your next turn is next round</tspan></text>
+    </g>
+  </g>
+</svg>
