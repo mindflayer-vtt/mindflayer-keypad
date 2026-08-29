@@ -1,4 +1,3 @@
-#include "config.h"
 #include "KeyboardMatrix.h"
 #include <xtensa/config/core.h>
 #include <Arduino.h>

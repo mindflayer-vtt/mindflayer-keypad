@@ -1,7 +1,7 @@
 #include "Protocol.h"
-
-#include <stdio.h>
 #include <string.h>
+#include <qcbor/qcbor_decode.h>
+#include <qcbor/qcbor_encode.h>
 #ifdef __linux__
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -10,127 +10,86 @@ extern "C" {
 #include <bearssl/bearssl.h>
 }
 #endif
-
-namespace mindflayer {
-namespace protocol {
-
-bool wasWritten(int length, size_t outputSize) {
-  return length >= 0 && static_cast<size_t>(length) < outputSize;
+namespace mindflayer { namespace protocol {
+static const char* KEYS[] = {"Q", "W", "E", "A", "S", "D", "Z", "X", "C", "SHI", "SPC"};
+static bool startArray(QCBORDecodeContext& d, const uint8_t* frame, size_t size, uint16_t arity) {
+  if (!frame || size == 0 || size > MAX_DEVICE_FRAME_SIZE) return false;
+  QCBORDecode_Init(&d, {frame, size}, QCBOR_DECODE_MODE_NORMAL); QCBORItem item;
+  return QCBORDecode_GetNext(&d, &item) == QCBOR_SUCCESS && item.uDataType == QCBOR_TYPE_ARRAY && item.val.uCount == arity;
 }
-
-bool buildRegistration(char* output, size_t outputSize, const char* controllerId, const char* firmware, const char* hardware) {
-  const int length = snprintf(
-    output,
-    outputSize,
-    firmware && hardware
-      ? "{\"type\":\"registration\",\"controller-id\":\"%s\",\"status\":\"connected\",\"receiver\":false,\"firmware\":\"%s\",\"hardware\":\"%s\"}"
-      : "{\"type\":\"registration\",\"controller-id\": \"%s\",\"status\":\"connected\",\"receiver\":false}",
-    controllerId, firmware, hardware
-  );
-  return wasWritten(length, outputSize);
+static bool getUInt(QCBORDecodeContext& d, uint64_t max, uint64_t& value) {
+  QCBORItem item; if (QCBORDecode_GetNext(&d, &item) != QCBOR_SUCCESS) return false;
+  if (item.uDataType == QCBOR_TYPE_INT64) { if (item.val.int64 < 0 || (uint64_t)item.val.int64 > max) return false; value = item.val.int64; return true; }
+  if (item.uDataType != QCBOR_TYPE_UINT64 || item.val.uint64 > max) return false;
+  value = item.val.uint64; return true;
 }
-
-bool copyString(char* output, size_t size, const char* input) {
-  if (!input || strlen(input) >= size) return false;
-  strcpy(output, input); return true;
+static bool getBytes(QCBORDecodeContext& d, uint8_t* output, size_t exact) {
+  QCBORItem item; if (QCBORDecode_GetNext(&d, &item) != QCBOR_SUCCESS || item.uDataType != QCBOR_TYPE_BYTE_STRING || item.val.string.len != exact) return false;
+  memcpy(output, item.val.string.ptr, exact); return true;
 }
-
-bool parseAuthChallenge(JsonDocument& document, const char* message, AuthChallenge& challenge) {
-  if (deserializeJson(document, message) || strcmp(document["type"] | "", "auth-challenge") || document["version"].as<int>() != 1)
-    return false;
-  return copyString(challenge.challenge, sizeof(challenge.challenge), document["challenge"]);
+static bool validUtf8(const uint8_t* s, size_t n) {
+  for (size_t i=0;i<n;) { uint8_t c=s[i++]; if(c<0x80)continue; size_t more; uint32_t cp;
+    if((c&0xe0)==0xc0){more=1;cp=c&0x1f;if(cp<2)return false;}else if((c&0xf0)==0xe0){more=2;cp=c&0x0f;}else if((c&0xf8)==0xf0){more=3;cp=c&7;}else return false;
+    if(i+more>n)return false;
+    for(size_t j=0;j<more;j++){uint8_t x=s[i++];if((x&0xc0)!=0x80)return false;cp=(cp<<6)|(x&0x3f);}
+    if((more==2&&cp<0x800)||(more==3&&cp<0x10000)||cp>0x10ffff||(cp>=0xd800&&cp<=0xdfff))return false;
+  } return true;
 }
-
-bool decodeSecret(const char* hex, unsigned char output[32]) {
-  if (!hex || strlen(hex) != 64) return false;
-  for (size_t i = 0; i < 32; i++) {
-    unsigned value;
-    if (sscanf(hex + i * 2, "%2x", &value) != 1) return false;
-    output[i] = static_cast<unsigned char>(value);
-  }
-  return true;
+static bool getText(QCBORDecodeContext& d, char* output, size_t capacity, bool allowEmpty = false) {
+  QCBORItem item; if (QCBORDecode_GetNext(&d, &item) != QCBOR_SUCCESS || item.uDataType != QCBOR_TYPE_TEXT_STRING || item.val.string.len >= capacity || (!allowEmpty && item.val.string.len == 0) || !validUtf8((const uint8_t*)item.val.string.ptr,item.val.string.len)) return false;
+  memcpy(output, item.val.string.ptr, item.val.string.len); output[item.val.string.len] = 0; return true;
 }
-
-void appendField(unsigned char* input, size_t& offset, const char* value) {
-  const size_t length = strlen(value);
-  input[offset++] = (length >> 24) & 0xff; input[offset++] = (length >> 16) & 0xff;
-  input[offset++] = (length >> 8) & 0xff; input[offset++] = length & 0xff;
+static bool finish(QCBORDecodeContext& d) { return QCBORDecode_Finish(&d) == QCBOR_SUCCESS; }
+static bool startEncode(QCBOREncodeContext& e, uint8_t* output, size_t size) {
+  if (!output || size == 0 || size > MAX_DEVICE_FRAME_SIZE) return false;
+  QCBOREncode_Init(&e, {output, size}); QCBOREncode_OpenArray(&e); return true;
+}
+static bool finishEncode(QCBOREncodeContext& e, size_t& written) {
+  QCBOREncode_CloseArray(&e); UsefulBufC encoded; if (QCBOREncode_Finish(&e, &encoded) != QCBOR_SUCCESS || encoded.len > MAX_DEVICE_FRAME_SIZE) return false;
+  written = encoded.len; return true;
+}
+static void addText(QCBOREncodeContext& e, const char* value) { QCBOREncode_AddText(&e, UsefulBuf_FromSZ(value)); }
+bool parseAuthChallenge(const uint8_t* frame, size_t size, AuthChallenge& challenge) {
+  QCBORDecodeContext d; uint64_t type, version; return startArray(d, frame, size, 3) && getUInt(d, 255, type) && type == AUTH_CHALLENGE && getUInt(d, 255, version) && version == 1 && getBytes(d, challenge.challenge, 32) && finish(d);
+}
+static void appendField(uint8_t* input, size_t& offset, const void* value, size_t length) {
+  input[offset++] = (length >> 24) & 0xff; input[offset++] = (length >> 16) & 0xff; input[offset++] = (length >> 8) & 0xff; input[offset++] = length & 0xff;
   memcpy(input + offset, value, length); offset += length;
 }
-
-bool buildAuthResponse(char* output, size_t outputSize, const char* deviceId, const char* secretHex, const char* challenge) {
-  static const char* domain = "mindflayer-device-auth-v1";
-  if (!deviceId || !challenge || strlen(deviceId) > 64 || strlen(challenge) > 96) return false;
-  unsigned char secret[32], input[4 + 25 + 4 + 64 + 4 + 96], digest[32];
-  if (!decodeSecret(secretHex, secret)) return false;
-  size_t inputLength = 0; appendField(input, inputLength, domain); appendField(input, inputLength, deviceId); appendField(input, inputLength, challenge);
+bool buildAuthResponse(uint8_t* output, size_t outputSize, size_t& written, const char* deviceId, const uint8_t secret[32], const uint8_t challenge[32]) {
+  static const char domain[] = "mindflayer-device-auth-v1";
+  if (!deviceId || !secret || !challenge || strlen(deviceId) == 0 || strlen(deviceId) > MAX_DEVICE_ID) return false;
+  uint8_t input[4 + sizeof(domain) - 1 + 4 + MAX_DEVICE_ID + 4 + 32], digest[32]; size_t inputLength = 0;
+  appendField(input, inputLength, domain, sizeof(domain) - 1); appendField(input, inputLength, deviceId, strlen(deviceId)); appendField(input, inputLength, challenge, 32);
 #ifdef __linux__
-  unsigned int digestLength = sizeof(digest);
-  HMAC(EVP_sha256(), secret, sizeof(secret), input, inputLength, digest, &digestLength);
+  unsigned int digestLength = sizeof(digest); HMAC(EVP_sha256(), secret, 32, input, inputLength, digest, &digestLength);
 #else
-  br_hmac_key_context key; br_hmac_context context;
-  br_hmac_key_init(&key, &br_sha256_vtable, secret, sizeof(secret)); br_hmac_init(&context, &key, 0);
-  br_hmac_update(&context, input, inputLength); br_hmac_out(&context, digest);
+  br_hmac_key_context key; br_hmac_context context; br_hmac_key_init(&key, &br_sha256_vtable, secret, 32); br_hmac_init(&context, &key, 0); br_hmac_update(&context, input, inputLength); br_hmac_out(&context, digest);
 #endif
-  char hex[65]; for (size_t i = 0; i < 32; i++) snprintf(hex + i * 2, 3, "%02x", digest[i]);
-  const int length = snprintf(output, outputSize, "{\"type\":\"auth-response\",\"device-id\":\"%s\",\"hmac\":\"%s\"}", deviceId, hex);
-  return wasWritten(length, outputSize);
+  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; QCBOREncode_AddUInt64(&e, AUTH_RESPONSE); addText(e, deviceId); QCBOREncode_AddBytes(&e, {digest, sizeof(digest)}); return finishEncode(e, written);
 }
-
-bool parseUpdateAvailable(JsonDocument& document, const char* message, UpdateAvailable& update) {
-  if (deserializeJson(document, message) || strcmp(document["type"] | "", "update-available")) return false;
-  const char* digest = document["sha256"] | "";
-  if (strlen(digest) != 64 || !document["size"].is<uint32_t>() || document["size"].as<uint32_t>() == 0) return false;
-  update.size = document["size"];
-  return copyString(update.version, sizeof(update.version), document["version"])
-    && copyString(update.url, sizeof(update.url), document["url"])
-    && copyString(update.token, sizeof(update.token), document["token"])
-    && copyString(update.sha256, sizeof(update.sha256), digest);
+bool parseAuthResult(const uint8_t* frame, size_t size, AuthResult& result) {
+  QCBORDecodeContext d; uint64_t type, status; if (!startArray(d, frame, size, 3) || !getUInt(d, 255, type) || type != AUTH_RESULT || !getUInt(d, 1, status) || !getText(d, result.deviceId, sizeof(result.deviceId), status == AUTH_FAILED) || !finish(d)) return false;
+  result.status = static_cast<AuthStatus>(status); return true;
 }
-
-bool buildKeyEvent(
-  char* output,
-  size_t outputSize,
-  const char* controllerId,
-  const char* key,
-  bool isDown
-) {
-  const int length = snprintf(
-    output,
-    outputSize,
-    "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}",
-    controllerId,
-    key,
-    isDown ? "down" : "up"
-  );
-  return wasWritten(length, outputSize);
+bool buildRegistration(uint8_t* output, size_t outputSize, size_t& written, const char* firmware, const char* hardware) {
+  if (!firmware || !hardware || strlen(firmware) == 0 || strlen(firmware) > MAX_VERSION || strlen(hardware) == 0 || strlen(hardware) > MAX_HARDWARE_ID) return false;
+  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; QCBOREncode_AddUInt64(&e, REGISTRATION); addText(e, firmware); addText(e, hardware); return finishEncode(e, written);
 }
-
-bool shouldRestart(bool qIsDown, bool shiftIsDown, bool spaceIsDown) {
-  return qIsDown && shiftIsDown && spaceIsDown;
+bool buildKeyEvent(uint8_t* output, size_t outputSize, size_t& written, const char* key, bool isDown) {
+  size_t code = 0; while (code < sizeof(KEYS) / sizeof(KEYS[0]) && strcmp(KEYS[code], key)) code++; if (code == sizeof(KEYS) / sizeof(KEYS[0])) return false;
+  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; QCBOREncode_AddUInt64(&e, KEY_EVENT); QCBOREncode_AddUInt64(&e, code); QCBOREncode_AddUInt64(&e, isDown ? ACTION_DOWN : ACTION_UP); return finishEncode(e, written);
 }
-
-bool parseConfiguration(
-  JsonDocument& document,
-  const char* message,
-  Configuration& configuration
-) {
-  const DeserializationError error = deserializeJson(document, message);
-  if (error || strcmp(document["type"].as<const char*>(), "configuration") != 0) {
-    return false;
-  }
-  configuration.led1 = {
-    document["led1"]["r"].as<uint8_t>(),
-    document["led1"]["g"].as<uint8_t>(),
-    document["led1"]["b"].as<uint8_t>()
-  };
-  configuration.led2 = {
-    document["led2"]["r"].as<uint8_t>(),
-    document["led2"]["g"].as<uint8_t>(),
-    document["led2"]["b"].as<uint8_t>()
-  };
-  return true;
+bool parseConfiguration(const uint8_t* frame, size_t size, Configuration& configuration) {
+  QCBORDecodeContext d; uint64_t type, c[6]; if (!startArray(d, frame, size, 7) || !getUInt(d, 255, type) || type != CONFIGURATION) return false;
+  for (uint8_t i = 0; i < 6; i++) if (!getUInt(d, 255, c[i])) return false;
+  if (!finish(d)) return false;
+  configuration = {{(uint8_t)c[0], (uint8_t)c[1], (uint8_t)c[2]}, {(uint8_t)c[3], (uint8_t)c[4], (uint8_t)c[5]}}; return true;
 }
-
+bool parseUpdateAvailable(const uint8_t* frame, size_t size, UpdateAvailable& update) {
+  QCBORDecodeContext d; uint64_t type, firmwareSize;
+  if (!startArray(d, frame, size, 6) || !getUInt(d, 255, type) || type != UPDATE_AVAILABLE || !getText(d, update.version, sizeof(update.version)) || !getUInt(d, 0xffffffff, firmwareSize) || firmwareSize == 0 || !getBytes(d, update.sha256, 32) || !getText(d, update.path, sizeof(update.path)) || !getBytes(d, update.token, 32) || !finish(d)) return false;
+  update.size = (uint32_t)firmwareSize; return true;
 }
-}
+bool shouldRestart(bool q, bool shift, bool space) { return q && shift && space; }
+} }
