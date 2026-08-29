@@ -7,6 +7,7 @@
 #include <ArduinoOTA.h>
 #include <ESP8266mDNS.h>
 #include <KeyboardMatrix.h>
+#include <Protocol.h>
 #include <xtensa/config/core.h>
 
 
@@ -196,7 +197,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
   if (event == WebsocketsEvent::ConnectionOpened)
   {
     Serial.println("Connection Opened: registering");
-    snprintf(buffer, BUFFER_SIZE, "{\"type\":\"registration\",\"controller-id\": \"%s\",\"status\":\"connected\",\"receiver\":false}", name);
+    mindflayer::protocol::buildRegistration(buffer, BUFFER_SIZE, name);
     client.send(buffer);
     setColors(0, 255, 0, 0, 0, 0);
   }
@@ -286,20 +287,24 @@ void setup() {
 }
 
 void onKeyChange(KeyboardMatrix::KeyState *key) {
-  const char* state = NULL;
-  if(key->isDown) {
-    state = "down";
-  } else {
-    state = "up";
-  }
-  snprintf(buffer, BUFFER_SIZE, "{\"type\":\"key-event\",\"controller-id\": \"%s\",\"key\":\"%s\",\"state\":\"%s\"}", name, key->key, state);
+  mindflayer::protocol::buildKeyEvent(
+    buffer,
+    BUFFER_SIZE,
+    name,
+    key->key,
+    key->isDown
+  );
   client.send(buffer);
   Serial.println(key->key);
 }
 
 void handleRestartRequest() {
   auto state = KeyboardMatrix::getState();
-  if((*state)[0][0].isDown && (*state)[3][0].isDown && (*state)[3][2].isDown) {
+  if(mindflayer::protocol::shouldRestart(
+    (*state)[0][0].isDown,
+    (*state)[3][0].isDown,
+    (*state)[3][2].isDown
+  )) {
     Serial.println("Restarting... ");
     client.close(websockets::CloseReason::CloseReason_GoingAway);
     ESP.restart();
