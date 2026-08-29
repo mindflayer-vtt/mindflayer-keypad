@@ -62,6 +62,11 @@ class EspSlotFlash : public RBootSlot::Flash {
 static EspSlotFlash slotFlash;
 #endif
 
+static void printHeapStats() {
+  Serial.printf("heap-free=%u; heap-largest=%u; heap-fragmentation=%u%%\n",
+                ESP.getFreeHeap(), ESP.getMaxFreeBlockSize(), ESP.getHeapFragmentation());
+}
+
 static void clearRecoveryMarker() { mindflayer::recovery::Marker marker = {}; ESP.rtcUserMemoryWrite(mindflayer::recovery::RTC_OFFSET, (uint32_t*)&marker, sizeof(marker)); }
 static bool consumeRecoveryMarker() {
   mindflayer::recovery::Marker marker = {};
@@ -139,12 +144,12 @@ static void processMessage(const uint8_t* data, size_t size) {
     else
 #endif
     if (protocol::buildRegistration(frameBuffer, sizeof(frameBuffer), written, FIRMWARE_VERSION, HARDWARE_ID)) { sendFrame(written); registered = true; }
-    Serial.printf("Authenticated as %s; firmware=%s; heap=%u\n", settings.deviceId, FIRMWARE_VERSION, ESP.getFreeHeap()); return;
+    Serial.printf("Authenticated as %s; firmware=%s; ", settings.deviceId, FIRMWARE_VERSION); printHeapStats(); return;
   }
   protocol::UpdateAvailable update;
   if (authenticated && protocol::parseUpdateAvailable(data, size, update)) {
     client.close(CloseReason_GoingAway); client = WebsocketsClient(); authenticated = wssHealthy = registered = false;
-    Serial.printf("WSS released for signed OTA; heap=%u\n", ESP.getFreeHeap()); performUpdate(update); reconnectRequested = true; return;
+    Serial.print("WSS released for signed OTA; "); printHeapStats(); performUpdate(update); reconnectRequested = true; return;
   }
   protocol::FirmwareAccepted accepted;
   if (authenticated && protocol::parseFirmwareAccepted(data, size, accepted)) {
@@ -177,7 +182,7 @@ static void onEvent(WebsocketsEvent event, String) {
   else if (event == WebsocketsEvent::GotPong) eventPong = true;
 }
 static void processWebSocketCallbacks() {
-  if (eventOpened) { eventOpened = false; authenticated = false; wssHealthy = true; Serial.printf("Pinned binary WSS connected; heap=%u\n", ESP.getFreeHeap()); }
+  if (eventOpened) { eventOpened = false; authenticated = false; wssHealthy = true; Serial.print("Pinned binary WSS connected; "); printHeapStats(); }
   if (eventClosed) { eventClosed = false; authenticated = false; wssHealthy = registered = false; reconnectRequested = true; Serial.println("WSS closed; reconnecting"); }
   if (eventPing) { eventPing = false; client.pong(); }
   if (eventPong) { eventPong = false; lastPong = millis(); }
@@ -209,7 +214,7 @@ static void processSerialProvisioning() {
   }
 }
 void setup() {
-  Serial.setRxBufferSize(provisioning::MAX_ENVELOPE_SIZE + 16); Serial.begin(115200); Serial.println(); Serial.printf("Mind Flayer %s booting; heap=%u; flash-real=%lu; flash-configured=%lu\n", FIRMWARE_VERSION, ESP.getFreeHeap(), (unsigned long)ESP.getFlashChipRealSize(), (unsigned long)ESP.getFlashChipSize()); Update.installSignature(&firmwareHash, &firmwareVerifier);
+  Serial.setRxBufferSize(provisioning::MAX_ENVELOPE_SIZE + 16); Serial.begin(115200); Serial.println(); Serial.printf("Mind Flayer %s booting; flash-real=%lu; flash-configured=%lu; ", FIRMWARE_VERSION, (unsigned long)ESP.getFlashChipRealSize(), (unsigned long)ESP.getFlashChipSize()); printHeapStats(); Update.installSignature(&firmwareHash, &firmwareVerifier);
 #ifdef RBOOT_INTEGRATION
   if (!BootControl::begin()) { Serial.println("FATAL: invalid rBoot metadata/RTC state"); return; }
   temporaryBoot = BootControl::isTemporaryBoot(); temporaryStarted = millis();
@@ -217,14 +222,14 @@ void setup() {
 #endif
   provisioning::Selection selected;
   if (!provisioning::loadStored(settings, &selected)) { clearRecoveryMarker(); Serial.println("UNPROVISIONED; NeoPixel DMA disabled; awaiting MFP1 serial provisioning envelope"); return; }
-  Serial.printf("Provisioning copy %c generation %lu loaded\n", selected.copy == provisioning::COPY_A ? 'A' : 'B', (unsigned long)selected.generation);
+  Serial.printf("Provisioning copy %c generation %lu loaded; ", selected.copy == provisioning::COPY_A ? 'A' : 'B', (unsigned long)selected.generation); printHeapStats();
   serverPublicKey = new BearSSL::PublicKey(settings.serverPublicKey, settings.serverPublicKeyLength); if (!serverPublicKey->isRSA() && !serverPublicKey->isEC()) { Serial.println("UNPROVISIONED; invalid server public key"); return; }
   if (mindflayer::health::shouldArmSerialRecovery(temporaryBoot, !temporaryBoot) && consumeRecoveryMarker()) { Serial.println("SERIAL PROVISIONING MODE; NeoPixel DMA disabled on GPIO3/RXD0"); return; }
   if (!mindflayer::health::shouldArmSerialRecovery(temporaryBoot, !temporaryBoot)) clearRecoveryMarker(); else { armRecoveryMarker(); Serial.println("Double-reset recovery window open"); delay(mindflayer::recovery::WINDOW_MS); clearRecoveryMarker(); }
   ledStrip = new (ledStripStorage) LedStrip(2, NEOPIXEL_DATA_PIN); ledStrip->Begin(); setColors(255, 0, 0, 0, 0, 0); Serial.println("NeoPixel DMA active on physical GPIO3/RXD0; serial RX disabled");
   provisioned = true; WiFi.hostname(settings.deviceId); WiFi.begin(settings.ssid, settings.wifiPassword);
   Serial.print("Connecting to provisioned Wi-Fi"); while (WiFi.status() != WL_CONNECTED) { Serial.print('.'); delay(500); }
-  wifiHealthy = true; Serial.printf(" connected: %s; heap=%u\n", WiFi.localIP().toString().c_str(), ESP.getFreeHeap()); KeyboardMatrix::initMatrix(); setupWebSocket();
+  wifiHealthy = true; Serial.printf(" connected: %s; ", WiFi.localIP().toString().c_str()); printHeapStats(); KeyboardMatrix::initMatrix(); setupWebSocket();
 }
 void onKeyChange(KeyboardMatrix::KeyState* key) { size_t written; if (protocol::buildKeyEvent(frameBuffer, sizeof(frameBuffer), written, key->key, key->isDown)) client.sendBinary((const char*)frameBuffer,written); }
 void loop() {

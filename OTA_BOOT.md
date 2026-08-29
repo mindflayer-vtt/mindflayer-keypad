@@ -27,6 +27,21 @@ Production uses rBoot 1.4.2 commit `614f33685d0dd990fc4202f2409b0d2365eeaef3` an
 
 CI signs `rboot-app.bin` with the offline/CI RSA private key and publishes only the signed application plus size and SHA-256 metadata. The server stores it and never receives a private signing key. rBoot and initial metadata are serial-install artifacts, not OTA artifacts.
 
+## Experiment-to-production integration
+
+The separate `mindflayer-keypad-rboot` worktree was evidence, not a source package. The production integration deliberately classified its pieces as follows:
+
+| Experimental piece | Production disposition |
+|---|---|
+| pinned rBoot/esptool2 build, big-flash linker contract, boot2 encoder, and ELF checks | integrated and hardened with CI byte/symbol/size verification |
+| `BootControl`, slot writer, and temporary-boot RTC use | adapted behind application-facing abstractions with strict slot bounds |
+| single-sector upstream rBoot config promotion | replaced by redundant transactional metadata with generation, CRC, and last-written commit marker |
+| serial experiment harness and `src/rboot_test.cpp` | test-only; intentionally omitted from production firmware |
+| experiment `config.h`, private signing key, flash backups, and `.hwtest` state | intentionally omitted; no device/installation secret enters a build or commit |
+| experiment slot A/B demo environments and direct flash commands | omitted from normal targets; replaced by the one-time topology-locked installer and authenticated OTA path |
+
+The health gate, server version acknowledgement, provisioning store, restricted-CBOR protocol, serial recovery isolation, and fault-injection builds are production integration work rather than transplanted experimental code. rBoot promotion is never inferred merely from reaching `setup()`.
+
 ## Installation
 
 Build the artifacts and committed initial metadata:
@@ -56,7 +71,9 @@ CI covers native/sanitizer state machines, layout, boot2 equivalence, strong-sym
 
 ## Integrated resource measurements
 
-The final local Core 3.1.2/GCC 10.3.0 production rBoot build uses 40,892/81,920 bytes static RAM and 434,019 bytes of linked flash. Its boot2 image is 434,096/1,040,384 bytes (41.72%), leaving 606,288 bytes (58.28%) in either slot. The retained normal build uses 39,332 bytes RAM and 444,263 linked flash bytes. rBoot is 2,688/4,096 bytes; each transactional metadata copy uses one 4 KiB sector, with its commit marker in the final four bytes.
+The final local Core 3.1.2/GCC 10.3.0 production rBoot build uses 40,920/81,920 bytes static RAM and 435,883 bytes of linked flash. Its boot2 image is 435,968/1,040,384 bytes (41.90%), leaving 604,416 bytes (590.25 KiB) in either slot. The retained normal build uses 39,384 bytes RAM and 446,239 linked flash bytes. rBoot is 2,688/4,096 bytes; each transactional metadata copy uses one 4 KiB sector, with its commit marker in the final four bytes.
+
+Existing lifecycle messages report free heap, largest free block, and fragmentation without periodic noisy logging. The integrated hardware run measured: boot and post-provisioning-load `32,080 / 31,392 / 3%`; post-Wi-Fi `30,472 / 29,688 / 3%`; pinned WSS plus authenticated registration `9,088 / 8,928 / 2%`; and immediately after releasing WSS for OTA `29,832 / 29,184 / 3%` (free / largest / fragmentation). A later rejected-download retry observed `29,720 / 20,872 / 25%`, documenting the transient fragmentation case as well.
 
 ## Integrated hardware validation
 
@@ -68,10 +85,12 @@ The observed matrix covered:
 - signed A-to-B streaming, temporary B health, server acceptance, transactional promotion, and permanent B reboot;
 - software reset before acceptance, which returned an unhealthy temporary candidate to the committed slot without entering serial recovery;
 - an artifact signed by an unauthorized key, which was rejected before selection;
+- a correctly signed artifact modified at byte 256 after signing, with its repository manifest size/SHA-256 recomputed, which reached the device signature check and printed `Signed rBoot OTA rejected; permanent slot unchanged`; metadata still selected generation-5 slot A and provisioning was unchanged;
 - reset after metadata body verification but before its commit marker, which retained the older committed slot;
 - reset immediately after the metadata commit marker, which retained the newly committed slot;
 - one-bit corruption inside the inactive boot2 IROM payload after application validation, for which rBoot printed `Temp boot rom (1) is bad` and watchdog-fell back to the permanent slot;
 - automated permanent-firmware double reset, which entered serial provisioning mode with GPIO3 DMA disabled, followed by a normal single-reset boot;
-- final healthy `0.1.9-rboot-hwtest-final.2` boot, provisioning load, Wi-Fi, pinned TLS/WSS, HMAC authentication, and registration.
+- final signed `0.2.1-rboot-metrics.1` A-to-B run, temporary-B health and acceptance, generation-6 promotion, permanent-B reboot, and a separate FTDI RTS reset that again booted permanent B and completed provisioning, Wi-Fi, pinned TLS/WSS, HMAC authentication, and registration;
+- a second post-signing mutation offered from the instrumented permanent B, which captured the OTA heap measurements above, was rejected cryptographically, and left permanent B running.
 
 Provisioning copies were read directly before and after the full OTA/fault matrix and compared byte-for-byte. Copy A remained SHA-256 `0ef48340f03ca22a368a85108cf797f593d6b651430dab76f013123ecba30cee`; copy B remained `6da5088e22014dce3af2e7a4b532ccb340661685a9629f46cb1937c7d819bb19`.
