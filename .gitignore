@@ -40,3 +40,6 @@
 
 # Config
 include/config.h
+/keys/
+/artifacts/
+/.hwtest/

@@ -1,4 +1,6 @@
 #define WIFI_SSID "<your wifi name>"
 #define WIFI_PASS "<your wifi password>"
-#define OTA_PASSWORD "<your OTA password>"
-#define WSS_URL   "<your websocket server url>"
+#define WSS_URL "wss://<server>:10443/ws"
+#define DEVICE_SECRET_HEX "<64 lowercase hex characters>"
+#define SERVER_PUBLIC_KEY_PEM "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n"
+#define FIRMWARE_SIGNING_PUBLIC_KEY_PEM "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n"

@@ -93,6 +93,26 @@ void test_rejects_malformed_and_unrelated_configuration_messages() {
   ));
 }
 
+void test_builds_firmware_registration() {
+  char output[256];
+  TEST_ASSERT_TRUE(mindflayer::protocol::buildRegistration(output, sizeof(output), "controller1", "1.2.3-test.1", "mindflayer-keypad-v1"));
+  TEST_ASSERT_EQUAL_STRING("{\"type\":\"registration\",\"controller-id\":\"controller1\",\"status\":\"connected\",\"receiver\":false,\"firmware\":\"1.2.3-test.1\",\"hardware\":\"mindflayer-keypad-v1\"}", output);
+}
+
+void test_authentication_vector_and_challenge() {
+  JsonDocument document; mindflayer::protocol::AuthChallenge challenge; char output[256];
+  TEST_ASSERT_TRUE(mindflayer::protocol::parseAuthChallenge(document, "{\"type\":\"auth-challenge\",\"version\":1,\"challenge\":\"nonce\"}", challenge));
+  TEST_ASSERT_TRUE(mindflayer::protocol::buildAuthResponse(output, sizeof(output), "controller1", "1111111111111111111111111111111111111111111111111111111111111111", challenge.challenge));
+  TEST_ASSERT_EQUAL_STRING("{\"type\":\"auth-response\",\"device-id\":\"controller1\",\"hmac\":\"7689f2a6005ab665f8a8fbf5dca46e63fafb9b2813ef08a3df0de168e052e63e\"}", output);
+}
+
+void test_parses_and_rejects_update_offers() {
+  JsonDocument document; mindflayer::protocol::UpdateAvailable update;
+  TEST_ASSERT_TRUE(mindflayer::protocol::parseUpdateAvailable(document, "{\"type\":\"update-available\",\"version\":\"1.2.3\",\"size\":123,\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"url\":\"/firmware/a/1.2.3\",\"token\":\"opaque\"}", update));
+  TEST_ASSERT_EQUAL_STRING("1.2.3", update.version); TEST_ASSERT_EQUAL_UINT32(123, update.size);
+  TEST_ASSERT_FALSE(mindflayer::protocol::parseUpdateAvailable(document, "{\"type\":\"update-available\",\"size\":0}", update));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_builds_canonical_controller_registration);
@@ -101,5 +121,8 @@ int main(int, char**) {
   RUN_TEST(test_requires_q_shift_and_space_for_restart);
   RUN_TEST(test_parses_canonical_led_configuration);
   RUN_TEST(test_rejects_malformed_and_unrelated_configuration_messages);
+  RUN_TEST(test_builds_firmware_registration);
+  RUN_TEST(test_authentication_vector_and_challenge);
+  RUN_TEST(test_parses_and_rejects_update_offers);
   return UNITY_END();
 }
