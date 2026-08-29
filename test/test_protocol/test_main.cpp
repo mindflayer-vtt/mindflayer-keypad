@@ -1,128 +1,62 @@
-#include <Protocol.h>
 #include <unity.h>
-
-#include <cstring>
-
-void test_builds_canonical_controller_registration() {
-  char output[160];
-  TEST_ASSERT_TRUE(
-    mindflayer::protocol::buildRegistration(output, sizeof(output), "controller1")
-  );
-  TEST_ASSERT_EQUAL_STRING(
-    "{\"type\":\"registration\",\"controller-id\": \"controller1\",\"status\":\"connected\",\"receiver\":false}",
-    output
-  );
+#include <FlashLayout.h>
+#include <Protocol.h>
+#include <Provisioning.h>
+#include <ProvisioningStorage.h>
+#include <array>
+#include <string>
+#include <string.h>
+using namespace mindflayer;
+static const char* PUBLIC_DER_HEX=
+"30820122300d06092a864886f70d01010105000382010f003082010a0282010100e30876faef1a62e490ce22679c63bbc4fa3541f31e9c5f70444fb96c80e26ebd20f636e62b33c25dfee2264aed873371b6e60b3ce673c3c6081f14bf3dd9152c66bf8688b8dcaaeb04b36e1e59041ead40ae24027296181110ccb2f9133461fa6862d169458b63f4bf5e472659879dabccdbf7f468a51d255c7447656398ab2a7536a575d4ba921d24dd5abef184615081a5e419a470f4f060638f3d920356f1c52a0a24c3131f391baf4e57da756cc314dd01d3fd9e9e5a5768963f831cc3270db8a8474a55191749a7cfbcfde719129d2eab6b206b862f58dee5db75e4de4114b6c4b2f51a8d383becd40c95a7e89888309234a3c3b3ea19a1d3f355ccf5470203010001";
+static size_t fromHex(const char* hex,uint8_t*out,size_t cap){size_t n=strlen(hex)/2;if(n>cap)return 0;for(size_t i=0;i<n;i++){unsigned v;sscanf(hex+i*2,"%2x",&v);out[i]=v;}return n;}
+static void assertBytes(const uint8_t*actual,size_t size,const char*hex){uint8_t expected[512];size_t n=fromHex(hex,expected,sizeof(expected));TEST_ASSERT_EQUAL_UINT32(n,size);TEST_ASSERT_EQUAL_UINT8_ARRAY(expected,actual,n);}
+static provisioning::Provisioning sample(const char*id="controller1"){
+  provisioning::Provisioning p={};strcpy(p.deviceId,id);memset(p.deviceSecret,0x11,32);strcpy(p.ssid,"test-ap");strcpy(p.wifiPassword,"correct horse battery staple");strcpy(p.serverHost,"10.42.0.1");p.serverPort=10443;p.serverPublicKeyLength=fromHex(PUBLIC_DER_HEX,p.serverPublicKey,sizeof(p.serverPublicKey));return p;
 }
-
-void test_builds_canonical_key_down_and_up_events() {
-  char output[160];
-  TEST_ASSERT_TRUE(
-    mindflayer::protocol::buildKeyEvent(
-      output,
-      sizeof(output),
-      "controller1",
-      "W",
-      true
-    )
-  );
-  TEST_ASSERT_EQUAL_STRING(
-    "{\"type\":\"key-event\",\"controller-id\": \"controller1\",\"key\":\"W\",\"state\":\"down\"}",
-    output
-  );
-
-  TEST_ASSERT_TRUE(
-    mindflayer::protocol::buildKeyEvent(
-      output,
-      sizeof(output),
-      "controller1",
-      "SPC",
-      false
-    )
-  );
-  TEST_ASSERT_EQUAL_STRING(
-    "{\"type\":\"key-event\",\"controller-id\": \"controller1\",\"key\":\"SPC\",\"state\":\"up\"}",
-    output
-  );
+class FakeFlash:public provisioning::FlashBackend{
+ public:std::array<uint8_t,flashlayout::SECTOR_SIZE>a,b;bool failErase=false,failDataWrite=false,failCommitWrite=false;FakeFlash(){a.fill(0xff);b.fill(0xff);}std::array<uint8_t,flashlayout::SECTOR_SIZE>*sector(uint32_t address){if(address>=flashlayout::PROVISIONING_A&&address<flashlayout::PROVISIONING_A+flashlayout::SECTOR_SIZE)return&a;if(address>=flashlayout::PROVISIONING_B&&address<flashlayout::PROVISIONING_B+flashlayout::SECTOR_SIZE)return&b;return nullptr;}
+ bool read(uint32_t address,void*out,size_t n)override{auto*s=sector(address);if(!s||address%flashlayout::SECTOR_SIZE+n>flashlayout::SECTOR_SIZE)return false;memcpy(out,s->data()+address%flashlayout::SECTOR_SIZE,n);return true;}
+ bool eraseSector(uint32_t s)override{if(failErase){failErase=false;return false;}if(s==flashlayout::PROVISIONING_A/flashlayout::SECTOR_SIZE){a.fill(0xff);return true;}if(s==flashlayout::PROVISIONING_B/flashlayout::SECTOR_SIZE){b.fill(0xff);return true;}return false;}
+ bool write(uint32_t address,const void*data,size_t n)override{auto*s=sector(address);if(!s||address%4||n%4||address%flashlayout::SECTOR_SIZE+n>flashlayout::SECTOR_SIZE)return false;size_t offset=address%flashlayout::SECTOR_SIZE;if(failCommitWrite&&offset==flashlayout::SECTOR_SIZE-4){failCommitWrite=false;return false;}const uint8_t*in=(const uint8_t*)data;size_t limit=failDataWrite&&offset==0?n/2:n;for(size_t i=0;i<limit;i++){if(((*s)[offset+i]&in[i])!=in[i])return false;(*s)[offset+i]&=in[i];}if(failDataWrite&&offset==0){failDataWrite=false;return false;}return true;}
+};
+static size_t envelope(const provisioning::Provisioning&p,uint8_t*out){size_t written=0;TEST_ASSERT_TRUE(provisioning::encodeEnvelope(p,out,provisioning::MAX_ENVELOPE_SIZE,written));return written;}
+static size_t findBytes(const uint8_t*data,size_t size,const uint8_t*needle,size_t count){for(size_t i=0;i+count<=size;i++)if(!memcmp(data+i,needle,count))return i;return size;}
+static void refreshEnvelopeCrc(uint8_t*e,size_t n){uint32_t crc=provisioning::crc32(e,n-4);e[n-4]=crc>>24;e[n-3]=crc>>16;e[n-2]=crc>>8;e[n-1]=crc;}
+void test_protocol_exact_fixtures(){
+ uint8_t out[512];size_t n;TEST_ASSERT_TRUE(protocol::buildRegistration(out,sizeof(out),n,"1.2.3","mindflayer-keypad-v1"));assertBytes(out,n,"830365312e322e33746d696e64666c617965722d6b65797061642d7631");
+ TEST_ASSERT_TRUE(protocol::buildKeyEvent(out,sizeof(out),n,"W",true));assertBytes(out,n,"83040101");
+ uint8_t challengeFrame[37];fromHex((std::string("8300015820")+std::string(64,'1')).c_str(),challengeFrame,sizeof(challengeFrame));protocol::AuthChallenge challenge;TEST_ASSERT_TRUE(protocol::parseAuthChallenge(challengeFrame,sizeof(challengeFrame),challenge));
+ uint8_t secret[32];memset(secret,0x11,32);TEST_ASSERT_TRUE(protocol::buildAuthResponse(out,sizeof(out),n,"controller1",secret,challenge.challenge));assertBytes(out,n,"83016b636f6e74726f6c6c6572315820e371e039a5fa8d68355af25c83deece181accbbd6f3cac420d63b9b1ec194c7e");
 }
-
-void test_reports_truncated_protocol_messages() {
-  char output[16];
-  TEST_ASSERT_FALSE(
-    mindflayer::protocol::buildRegistration(output, sizeof(output), "controller1")
-  );
-  TEST_ASSERT_EQUAL_CHAR('\0', output[sizeof(output) - 1]);
+void test_protocol_decodes_server_fixtures(){
+ uint8_t f[512];protocol::Configuration c;size_t n=fromHex("8705010203040506",f,sizeof(f));TEST_ASSERT_TRUE(protocol::parseConfiguration(f,n,c));TEST_ASSERT_EQUAL_UINT8(6,c.led2.b);
+ protocol::AuthResult auth;n=fromHex("8302006b636f6e74726f6c6c657231",f,sizeof(f));TEST_ASSERT_TRUE(protocol::parseAuthResult(f,n,auth));TEST_ASSERT_EQUAL_STRING("controller1",auth.deviceId);
+ const char* update="860665312e322e33187b58200000000000000000000000000000000000000000000000000000000000000000712f6669726d776172652f612f312e322e3358203333333333333333333333333333333333333333333333333333333333333333";n=fromHex(update,f,sizeof(f));protocol::UpdateAvailable u;TEST_ASSERT_TRUE(protocol::parseUpdateAvailable(f,n,u));TEST_ASSERT_EQUAL_UINT32(123,u.size);TEST_ASSERT_EQUAL_STRING("/firmware/a/1.2.3",u.path);
 }
-
-void test_requires_q_shift_and_space_for_restart() {
-  TEST_ASSERT_TRUE(mindflayer::protocol::shouldRestart(true, true, true));
-  TEST_ASSERT_FALSE(mindflayer::protocol::shouldRestart(false, true, true));
-  TEST_ASSERT_FALSE(mindflayer::protocol::shouldRestart(true, false, true));
-  TEST_ASSERT_FALSE(mindflayer::protocol::shouldRestart(true, true, false));
+void test_restricted_protocol_rejects_malformed_corpus(){
+ protocol::Configuration c;const uint8_t*cases[]={ (const uint8_t*)"",(const uint8_t*)"\x87",(const uint8_t*)"\x9f\x05\x01\x02\x03\x04\x05\x06\xff",(const uint8_t*)"\x87\xc0\x05\x01\x02\x03\x04\x05",(const uint8_t*)"\x87\x05\xf9\x00\x00\x02\x03\x04\x05\x06",(const uint8_t*)"\x87\x05\x01\x02\x03\x04\x05\x06\x00"};size_t sizes[]={0,1,9,8,10,9};for(size_t i=0;i<6;i++)TEST_ASSERT_FALSE(protocol::parseConfiguration(cases[i],sizes[i],c));
+ uint8_t huge[protocol::MAX_DEVICE_FRAME_SIZE+1]={0};TEST_ASSERT_FALSE(protocol::parseConfiguration(huge,sizeof(huge),c));
+ const uint8_t invalidUtf8[]={0x83,0x02,0x00,0x61,0xff};protocol::AuthResult result;TEST_ASSERT_FALSE(protocol::parseAuthResult(invalidUtf8,sizeof(invalidUtf8),result));
 }
-
-void test_parses_canonical_led_configuration() {
-  JsonDocument document;
-  mindflayer::protocol::Configuration configuration;
-  TEST_ASSERT_TRUE(mindflayer::protocol::parseConfiguration(
-    document,
-    "{\"type\":\"configuration\",\"controller-id\":\"controller1\","
-      "\"led1\":{\"r\":1,\"g\":2,\"b\":3},"
-      "\"led2\":{\"r\":4,\"g\":5,\"b\":6}}",
-    configuration
-  ));
-  TEST_ASSERT_EQUAL_UINT8(1, configuration.led1.r);
-  TEST_ASSERT_EQUAL_UINT8(2, configuration.led1.g);
-  TEST_ASSERT_EQUAL_UINT8(3, configuration.led1.b);
-  TEST_ASSERT_EQUAL_UINT8(4, configuration.led2.r);
-  TEST_ASSERT_EQUAL_UINT8(5, configuration.led2.g);
-  TEST_ASSERT_EQUAL_UINT8(6, configuration.led2.b);
+void test_crc_and_envelope(){TEST_ASSERT_EQUAL_HEX32(0xcbf43926,provisioning::crc32((const uint8_t*)"123456789",9));uint8_t e[provisioning::MAX_ENVELOPE_SIZE];auto p=sample();size_t n=envelope(p,e);const char* fixture="4d465031010194a80001016b636f6e74726f6c6c65723102582011111111111111111111111111111111111111111111111111111111111111110367746573742d617004781c636f727265637420686f727365206261747465727920737461706c65056931302e34322e302e31061928cb0759012630820122300d06092a864886f70d01010105000382010f003082010a0282010100e30876faef1a62e490ce22679c63bbc4fa3541f31e9c5f70444fb96c80e26ebd20f636e62b33c25dfee2264aed873371b6e60b3ce673c3c6081f14bf3dd9152c66bf8688b8dcaaeb04b36e1e59041ead40ae24027296181110ccb2f9133461fa6862d169458b63f4bf5e472659879dabccdbf7f468a51d255c7447656398ab2a7536a575d4ba921d24dd5abef184615081a5e419a470f4f060638f3d920356f1c52a0a24c3131f391baf4e57da756cc314dd01d3fd9e9e5a5768963f831cc3270db8a8474a55191749a7cfbcfde719129d2eab6b206b862f58dee5db75e4de4114b6c4b2f51a8d383becd40c95a7e89888309234a3c3b3ea19a1d3f355ccf5470203010001fa6fb8d9";assertBytes(e,n,fixture);provisioning::Provisioning decoded;TEST_ASSERT_TRUE(provisioning::decodeEnvelope(e,n,decoded));TEST_ASSERT_EQUAL_STRING(p.deviceId,decoded.deviceId);e[20]^=1;TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,decoded));}
+void test_redundant_store_selection_and_updates(){FakeFlash flash;provisioning::ProvisioningStore store(flash);provisioning::Provisioning out;provisioning::Selection s;TEST_ASSERT_FALSE(store.load(out,&s));uint8_t e[provisioning::MAX_ENVELOPE_SIZE];auto p=sample("controllerA");size_t n=envelope(p,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n,&s));TEST_ASSERT_EQUAL(provisioning::COPY_A,s.copy);TEST_ASSERT_EQUAL_UINT32(1,s.generation);p=sample("controllerB");n=envelope(p,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n,&s));TEST_ASSERT_EQUAL(provisioning::COPY_B,s.copy);TEST_ASSERT_EQUAL_UINT32(2,s.generation);TEST_ASSERT_TRUE(store.load(out,&s));TEST_ASSERT_EQUAL_STRING("controllerB",out.deviceId);}
+void test_newer_uncommitted_or_bad_crc_falls_back(){FakeFlash flash;provisioning::ProvisioningStore store(flash);uint8_t e[provisioning::MAX_ENVELOPE_SIZE];auto p=sample("old");size_t n=envelope(p,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n));p=sample("new");n=envelope(p,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n));flash.b[flashlayout::SECTOR_SIZE-1]=0xff;provisioning::Provisioning out;provisioning::Selection s;TEST_ASSERT_TRUE(store.load(out,&s));TEST_ASSERT_EQUAL_STRING("old",out.deviceId);TEST_ASSERT_TRUE(store.writeEnvelope(e,n));flash.b[20]^=1;TEST_ASSERT_TRUE(store.load(out,&s));TEST_ASSERT_EQUAL_STRING("old",out.deviceId);}
+void test_generation_serial_arithmetic(){TEST_ASSERT_TRUE(provisioning::generationNewer(2,1));TEST_ASSERT_TRUE(provisioning::generationNewer(0,0xffffffff));TEST_ASSERT_FALSE(provisioning::generationNewer(1,2));TEST_ASSERT_FALSE(provisioning::generationNewer(0x80000000,0));}
+void test_power_loss_failures_preserve_previous_copy(){FakeFlash flash;provisioning::ProvisioningStore store(flash);uint8_t e[provisioning::MAX_ENVELOPE_SIZE];auto old=sample("old");size_t n=envelope(old,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n));auto committedA=flash.a;auto freshB=flash.b;auto newer=sample("new");n=envelope(newer,e);provisioning::Provisioning out;provisioning::Selection selected;
+ flash.failErase=true;TEST_ASSERT_FALSE(store.writeEnvelope(e,n));TEST_ASSERT_EQUAL_UINT8_ARRAY(committedA.data(),flash.a.data(),flashlayout::SECTOR_SIZE);TEST_ASSERT_TRUE(store.load(out,&selected));TEST_ASSERT_EQUAL_STRING("old",out.deviceId);
+ flash.b=freshB;flash.failDataWrite=true;TEST_ASSERT_FALSE(store.writeEnvelope(e,n));TEST_ASSERT_EQUAL_UINT8_ARRAY(committedA.data(),flash.a.data(),flashlayout::SECTOR_SIZE);TEST_ASSERT_TRUE(store.load(out,&selected));TEST_ASSERT_EQUAL_STRING("old",out.deviceId);
+ flash.b=freshB;flash.failCommitWrite=true;TEST_ASSERT_FALSE(store.writeEnvelope(e,n));TEST_ASSERT_EQUAL_UINT8_ARRAY(committedA.data(),flash.a.data(),flashlayout::SECTOR_SIZE);TEST_ASSERT_TRUE(store.load(out,&selected));TEST_ASSERT_EQUAL_STRING("old",out.deviceId);
 }
-
-void test_rejects_malformed_and_unrelated_configuration_messages() {
-  JsonDocument document;
-  mindflayer::protocol::Configuration configuration;
-  TEST_ASSERT_FALSE(mindflayer::protocol::parseConfiguration(
-    document,
-    "{malformed",
-    configuration
-  ));
-  TEST_ASSERT_FALSE(mindflayer::protocol::parseConfiguration(
-    document,
-    "{\"type\":\"key-event\"}",
-    configuration
-  ));
-}
-
-void test_builds_firmware_registration() {
-  char output[256];
-  TEST_ASSERT_TRUE(mindflayer::protocol::buildRegistration(output, sizeof(output), "controller1", "1.2.3-test.1", "mindflayer-keypad-v1"));
-  TEST_ASSERT_EQUAL_STRING("{\"type\":\"registration\",\"controller-id\":\"controller1\",\"status\":\"connected\",\"receiver\":false,\"firmware\":\"1.2.3-test.1\",\"hardware\":\"mindflayer-keypad-v1\"}", output);
-}
-
-void test_authentication_vector_and_challenge() {
-  JsonDocument document; mindflayer::protocol::AuthChallenge challenge; char output[256];
-  TEST_ASSERT_TRUE(mindflayer::protocol::parseAuthChallenge(document, "{\"type\":\"auth-challenge\",\"version\":1,\"challenge\":\"nonce\"}", challenge));
-  TEST_ASSERT_TRUE(mindflayer::protocol::buildAuthResponse(output, sizeof(output), "controller1", "1111111111111111111111111111111111111111111111111111111111111111", challenge.challenge));
-  TEST_ASSERT_EQUAL_STRING("{\"type\":\"auth-response\",\"device-id\":\"controller1\",\"hmac\":\"7689f2a6005ab665f8a8fbf5dca46e63fafb9b2813ef08a3df0de168e052e63e\"}", output);
-}
-
-void test_parses_and_rejects_update_offers() {
-  JsonDocument document; mindflayer::protocol::UpdateAvailable update;
-  TEST_ASSERT_TRUE(mindflayer::protocol::parseUpdateAvailable(document, "{\"type\":\"update-available\",\"version\":\"1.2.3\",\"size\":123,\"sha256\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"url\":\"/firmware/a/1.2.3\",\"token\":\"opaque\"}", update));
-  TEST_ASSERT_EQUAL_STRING("1.2.3", update.version); TEST_ASSERT_EQUAL_UINT32(123, update.size);
-  TEST_ASSERT_FALSE(mindflayer::protocol::parseUpdateAvailable(document, "{\"type\":\"update-available\",\"size\":0}", update));
-}
-
-int main(int, char**) {
-  UNITY_BEGIN();
-  RUN_TEST(test_builds_canonical_controller_registration);
-  RUN_TEST(test_builds_canonical_key_down_and_up_events);
-  RUN_TEST(test_reports_truncated_protocol_messages);
-  RUN_TEST(test_requires_q_shift_and_space_for_restart);
-  RUN_TEST(test_parses_canonical_led_configuration);
-  RUN_TEST(test_rejects_malformed_and_unrelated_configuration_messages);
-  RUN_TEST(test_builds_firmware_registration);
-  RUN_TEST(test_authentication_vector_and_challenge);
-  RUN_TEST(test_parses_and_rejects_update_offers);
-  return UNITY_END();
-}
+void test_envelope_bounds_schema_and_semantics(){uint8_t e[provisioning::MAX_ENVELOPE_SIZE];auto p=sample();size_t n=envelope(p,e);provisioning::Provisioning out;
+ uint8_t original=e[0];e[0]='X';TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,out));e[0]=original;e[4]=2;refreshEnvelopeCrc(e,n);TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,out));e[4]=1;
+ e[5]=4;e[6]=1;TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,out));n=envelope(p,e);TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n-1,out));
+ size_t payload=provisioning::ENVELOPE_HEADER_SIZE;e[payload+2]=2;refreshEnvelopeCrc(e,n);TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,out));n=envelope(p,e);
+ const uint8_t secretHeader[]={2,0x58,0x20};size_t at=findBytes(e,n,secretHeader,sizeof(secretHeader));TEST_ASSERT_TRUE(at<n);e[at+2]=31;refreshEnvelopeCrc(e,n);TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,out));n=envelope(p,e);
+ const uint8_t keyHeader[]={7,0x59,0x01,0x26,0x30};at=findBytes(e,n,keyHeader,sizeof(keyHeader));TEST_ASSERT_TRUE(at<n);e[at+4]^=1;refreshEnvelopeCrc(e,n);TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e,n,out));}
+void test_copy_selection_all_validity_combinations(){FakeFlash flash;provisioning::ProvisioningStore store(flash);uint8_t e[provisioning::MAX_ENVELOPE_SIZE];auto p=sample("A");size_t n=envelope(p,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n));p=sample("B");n=envelope(p,e);TEST_ASSERT_TRUE(store.writeEnvelope(e,n));provisioning::Provisioning out;provisioning::Selection s;
+ auto savedA=flash.a;flash.a.fill(0xff);TEST_ASSERT_TRUE(store.load(out,&s));TEST_ASSERT_EQUAL(provisioning::COPY_B,s.copy);flash.a=savedA;auto savedB=flash.b;flash.b.fill(0xff);TEST_ASSERT_TRUE(store.load(out,&s));TEST_ASSERT_EQUAL(provisioning::COPY_A,s.copy);flash.b=savedB;
+ std::swap(flash.a,flash.b);TEST_ASSERT_TRUE(store.load(out,&s));TEST_ASSERT_EQUAL(provisioning::COPY_A,s.copy);flash.a.fill(0xff);flash.b.fill(0xff);TEST_ASSERT_FALSE(store.load(out,&s));TEST_ASSERT_EQUAL(provisioning::NO_COPY,s.copy);}
+void test_bounded_random_corpus_is_memory_safe(){uint32_t state=0x5eed1234;uint8_t bytes[provisioning::MAX_ENVELOPE_SIZE+1];for(size_t round=0;round<10000;round++){state^=state<<13;state^=state>>17;state^=state<<5;size_t n=state%sizeof(bytes);for(size_t i=0;i<n;i++){state^=state<<13;state^=state>>17;state^=state<<5;bytes[i]=state;}protocol::AuthChallenge challenge;protocol::AuthResult auth;protocol::Configuration configuration;protocol::UpdateAvailable update;provisioning::Provisioning p;protocol::parseAuthChallenge(bytes,n,challenge);protocol::parseAuthResult(bytes,n,auth);protocol::parseConfiguration(bytes,n,configuration);protocol::parseUpdateAvailable(bytes,n,update);provisioning::decodeEnvelope(bytes,n,p);}}
+void setUp(){}void tearDown(){}
+int main(){UNITY_BEGIN();RUN_TEST(test_protocol_exact_fixtures);RUN_TEST(test_protocol_decodes_server_fixtures);RUN_TEST(test_restricted_protocol_rejects_malformed_corpus);RUN_TEST(test_crc_and_envelope);RUN_TEST(test_redundant_store_selection_and_updates);RUN_TEST(test_newer_uncommitted_or_bad_crc_falls_back);RUN_TEST(test_generation_serial_arithmetic);RUN_TEST(test_power_loss_failures_preserve_previous_copy);RUN_TEST(test_envelope_bounds_schema_and_semantics);RUN_TEST(test_copy_selection_all_validity_combinations);RUN_TEST(test_bounded_random_corpus_is_memory_safe);return UNITY_END();}
