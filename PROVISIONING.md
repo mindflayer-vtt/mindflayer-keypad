@@ -38,6 +38,12 @@ Power loss before erase changes nothing; after erase, during data writing, or be
 
 ## Serial provisioning and recovery
 
+Existing keypad PCBs physically connect NeoPixel data to ESP8266 GPIO3/RXD0. Normal provisioned operation therefore uses NeoPixelBus's ESP8266 `Neo800KbpsMethod` DMA/I²S backend on GPIO3 and cannot receive UART data at the same time. This is a hardware constraint; production firmware must not redirect the LEDs to another pin.
+
+Serial provisioning is a distinct boot mode. An unprovisioned boot never constructs or initializes the NeoPixelBus object, leaving GPIO3 as UART RX. A provisioned device enters the same mode after two reset pulses within a 1.5-second window. The first boot writes a magic-plus-inverse marker at RTC user-memory block 32 (byte 128, above the RTC words reserved for eboot OTA); the second boot consumes and clears it, skips NeoPixel construction, skips Wi-Fi, and waits for one MFP1 envelope. A normal single reset clears the marker after the window and only then constructs the DMA object and calls `Begin()`.
+
+NeoPixelBus 2.8.4 was inspected for this lifecycle: the ESP8266 DMA method constructor allocates its DMA buffers and records its instance, while `Begin()` reaches `InitializeI2s()` and changes fixed GPIO3 to I²S function 1. Firmware defers both construction and initialization until recovery mode has been ruled out. It never attempts concurrent UART RX and NeoPixel DMA.
+
 Generate a bundle from the server's stored device secret and certificate public key, then send it to the reported stable serial path:
 
 ```sh
@@ -49,6 +55,6 @@ npm run device:bundle -- controller1 provisioning/controller1.provisioning.bin
 npm run device:serial-provision -- provisioning/controller1.provisioning.bin /dev/serial/by-path/...
 ```
 
-Bundles are mode 0600 and ignored. The sender requires a stable `/dev/serial/by-path` path, releases GPIO0, pulses reset through FTDI RTS, waits for the application, sends the already validated bounded envelope, and waits for the device acknowledgement. No person needs to press reset. The device bounds and validates the envelope in RAM, writes only through `ProvisioningStore`, verifies persisted data, reports success, and reboots. Reprovisioning uses the alternate sector and increments generation. Physical serial access and raw flash access are trusted: CRC detects accidental corruption, not tampering. A physical attacker can extract the Wi-Fi password and HMAC secret; this is accepted for the ESP8266 threat model.
+Bundles are mode 0600 and ignored. The sender requires a stable `/dev/serial/by-path` path, releases GPIO0, pulses reset twice through FTDI RTS to select recovery mode, waits for the application, sends the already validated bounded envelope, and waits for the device acknowledgement. The same sequence also works on an unprovisioned device. No person needs to press reset. The device bounds and validates the envelope in RAM, writes only through `ProvisioningStore`, verifies persisted data, reports success, and reboots. Reprovisioning uses the alternate sector and increments generation. Physical serial access and raw flash access are trusted: CRC detects accidental corruption, not tampering. A physical attacker can extract the Wi-Fi password and HMAC secret; this is accepted for the ESP8266 threat model.
 
 The later rBoot integration is not included here. The proven experiment used rBoot 1.4.2 at pinned upstream commit `614f33685d0dd990fc4202f2409b0d2365eeaef3`, `BOOT_RTC_ENABLED`, `BOOT_BIG_FLASH`, `BOOT_CONFIG_CHKSUM`, and GCC 10.3.0. Its two-slot layout can reuse these sectors unchanged. Future temporary-image promotion should occur only after provisioning loads, Wi-Fi connects, the server TLS public key validates, WSS establishes, HMAC authentication succeeds, and the server acknowledges the candidate firmware version.

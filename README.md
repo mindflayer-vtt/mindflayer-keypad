@@ -40,6 +40,8 @@ You have to have set up the following software in order to compile an flash the 
 
 The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [PROVISIONING.md](PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.
 
+Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses the ESP8266 DMA backend on that physical pin, so UART RX is intentionally available only in the special unprovisioned/double-reset recovery mode documented in [PROVISIONING.md](PROVISIONING.md). The host provisioning tool enters that mode automatically through two FTDI RTS reset pulses.
+
 ## Flashing
 
 1. Connect the wemos d1 mini to the PC with USB
