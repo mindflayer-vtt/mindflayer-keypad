@@ -39,6 +39,10 @@ static BearSSL::PublicKey* serverPublicKey = nullptr;
 static BearSSL::PublicKey firmwareSigningPublicKey(FIRMWARE_SIGNING_PUBLIC_KEY_PEM);
 static BearSSL::HashSHA256 firmwareHash;
 static BearSSL::SigningVerifier firmwareVerifier(&firmwareSigningPublicKey);
+#ifdef RBOOT_INTEGRATION
+static uint8_t otaBuffer[512], otaSignature[512], otaDigest[32];
+static br_sha256_context otaArtifactHash;
+#endif
 using LedStrip = NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod>;
 alignas(LedStrip) static uint8_t ledStripStorage[sizeof(LedStrip)];
 static LedStrip* ledStrip = nullptr;
@@ -89,18 +93,18 @@ static void performUpdate(const protocol::UpdateAvailable& update) {
   if (!writer.begin(target, imageSize)) { Serial.println("OTA rejected before erase by slot bounds/state"); http.end(); return; }
   const int status = http.GET();
   if (status != HTTP_CODE_OK || http.getSize() != static_cast<int>(update.size)) { Serial.printf("OTA HTTPS response rejected: %d\n", status); writer.abort(); http.end(); return; }
-  WiFiClient& stream = http.getStream(); uint8_t buffer[512], signature[512]; uint32_t received = 0; unsigned long lastData = millis();
-  br_sha256_context artifactHash; br_sha256_init(&artifactHash); firmwareHash.begin(); bool ok = true;
+  WiFiClient& stream = http.getStream(); uint32_t received = 0; unsigned long lastData = millis();
+  br_sha256_init(&otaArtifactHash); firmwareHash.begin(); bool ok = true;
   while (ok && received < update.size) {
     size_t available = stream.available(); if (!available) { if (!stream.connected() || millis()-lastData>60000) { ok=false; break; } delay(1); continue; }
-    size_t count = min(available, min(sizeof(buffer), static_cast<size_t>(update.size-received))); int got=stream.readBytes(buffer,count); if(got<=0){ok=false;break;} count=got; lastData=millis(); br_sha256_update(&artifactHash,buffer,count);
-    size_t offset=0; if(received<imageSize){size_t body=min(count,static_cast<size_t>(imageSize-received)); firmwareHash.add(buffer,body); ok=writer.write(buffer,body); offset=body;}
-    if(ok&&offset<count){size_t tailOffset=received+offset-imageSize;if(tailOffset+count-offset>sizeof(signature)){ok=false;break;}memcpy(signature+tailOffset,buffer+offset,count-offset);} received+=count; delay(0);
+    size_t count = min(available, min(sizeof(otaBuffer), static_cast<size_t>(update.size-received))); int got=stream.readBytes(otaBuffer,count); if(got<=0){ok=false;break;} count=got; lastData=millis(); br_sha256_update(&otaArtifactHash,otaBuffer,count);
+    size_t offset=0; if(received<imageSize){size_t body=min(count,static_cast<size_t>(imageSize-received)); firmwareHash.add(otaBuffer,body); ok=writer.write(otaBuffer,body); offset=body;}
+    if(ok&&offset<count){size_t tailOffset=received+offset-imageSize;if(tailOffset+count-offset>sizeof(otaSignature)){ok=false;break;}memcpy(otaSignature+tailOffset,otaBuffer+offset,count-offset);} received+=count; delay(0);
   }
-  uint8_t digest[32]; br_sha256_out(&artifactHash,digest); firmwareHash.end(); uint32_t encodedLength=0;
-  if (received==update.size) memcpy(&encodedLength, signature+signatureSize, 4);
-  ok = ok && received==update.size && memcmp(digest,update.sha256,32)==0 && encodedLength==signatureSize &&
-       firmwareVerifier.verify(&firmwareHash,signature,signatureSize) && writer.finish();
+  br_sha256_out(&otaArtifactHash,otaDigest); firmwareHash.end(); uint32_t encodedLength=0;
+  if (received==update.size) memcpy(&encodedLength, otaSignature+signatureSize, 4);
+  ok = ok && received==update.size && memcmp(otaDigest,update.sha256,32)==0 && encodedLength==signatureSize &&
+       firmwareVerifier.verify(&firmwareHash,otaSignature,signatureSize) && writer.finish();
   if (!ok) { Serial.println("Signed rBoot OTA rejected; permanent slot unchanged"); writer.abort(); http.end(); return; }
   Serial.printf("Validated candidate in slot %c; requesting temporary boot\n", target==RBootSlot::Slot::A?'A':'B'); http.end();
   if (!BootControl::bootTemporary(static_cast<uint8_t>(target))) { Serial.println("Temporary boot request failed"); return; }
@@ -119,11 +123,19 @@ static void processMessage(const uint8_t* data, size_t size) {
   protocol::AuthResult auth;
   if (protocol::parseAuthResult(data, size, auth)) {
     if (auth.status != protocol::AUTH_OK || strcmp(auth.deviceId, settings.deviceId)) { client.close(CloseReason_PolicyViolation); return; }
-    authenticated = true; if (protocol::buildRegistration(frameBuffer, sizeof(frameBuffer), written, FIRMWARE_VERSION, HARDWARE_ID)) { sendFrame(written); registered = true; }
+    authenticated = true;
+#if defined(RBOOT_INTEGRATION) && defined(TEST_FAIL_BEFORE_SERVER_ACK)
+    if (temporaryBoot) Serial.println("TEST: withholding candidate registration before forced failure");
+    else
+#endif
+    if (protocol::buildRegistration(frameBuffer, sizeof(frameBuffer), written, FIRMWARE_VERSION, HARDWARE_ID)) { sendFrame(written); registered = true; }
     Serial.printf("Authenticated as %s; firmware=%s; heap=%u\n", settings.deviceId, FIRMWARE_VERSION, ESP.getFreeHeap()); return;
   }
   protocol::UpdateAvailable update;
-  if (authenticated && protocol::parseUpdateAvailable(data, size, update)) { client.close(CloseReason_GoingAway); performUpdate(update); return; }
+  if (authenticated && protocol::parseUpdateAvailable(data, size, update)) {
+    client.close(CloseReason_GoingAway); client = WebsocketsClient(); authenticated = wssHealthy = registered = false;
+    Serial.printf("WSS released for signed OTA; heap=%u\n", ESP.getFreeHeap()); performUpdate(update); reconnectRequested = true; return;
+  }
   protocol::FirmwareAccepted accepted;
   if (authenticated && protocol::parseFirmwareAccepted(data, size, accepted)) {
 #ifdef RBOOT_INTEGRATION
