@@ -1,5 +1,6 @@
 #pragma once
 #define HARDWARE_ID "mindflayer-keypad-v1"
+#define NEOPIXEL_DATA_PIN 3
 #define FIRMWARE_SIGNING_PUBLIC_KEY_PEM \
 "-----BEGIN PUBLIC KEY-----\n" \
 "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4wh2+u8aYuSQziJnnGO7\n" \

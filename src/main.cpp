@@ -6,9 +6,11 @@
 #include <HardwareConfig.h>
 #include <KeyboardMatrix.h>
 #include <NeoPixelBus.h>
+#include <new>
 #include <Protocol.h>
 #include <Provisioning.h>
 #include <ProvisioningStorage.h>
+#include <RecoveryMode.h>
 
 #ifndef FIRMWARE_VERSION
 #define FIRMWARE_VERSION "0.0.0-dev"
@@ -26,12 +28,24 @@ static BearSSL::PublicKey* serverPublicKey = nullptr;
 static BearSSL::PublicKey firmwareSigningPublicKey(FIRMWARE_SIGNING_PUBLIC_KEY_PEM);
 static BearSSL::HashSHA256 firmwareHash;
 static BearSSL::SigningVerifier firmwareVerifier(&firmwareSigningPublicKey);
-static NeoPixelBus<NeoGrbFeature, NeoEsp8266BitBang800KbpsMethod> ledStrip(2, 2);
+using LedStrip = NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod>;
+alignas(LedStrip) static uint8_t ledStripStorage[sizeof(LedStrip)];
+static LedStrip* ledStrip = nullptr;
 static bool provisioned = false, reconnectRequested = false, authenticated = false;
 static uint32_t lastPong = 0;
 
+static void clearRecoveryMarker() { mindflayer::recovery::Marker marker = {}; ESP.rtcUserMemoryWrite(mindflayer::recovery::RTC_OFFSET, (uint32_t*)&marker, sizeof(marker)); }
+static bool consumeRecoveryMarker() {
+  mindflayer::recovery::Marker marker = {};
+  bool requested = ESP.rtcUserMemoryRead(mindflayer::recovery::RTC_OFFSET, (uint32_t*)&marker, sizeof(marker)) && mindflayer::recovery::markerValid(marker);
+  clearRecoveryMarker();
+  return requested;
+}
+static void armRecoveryMarker() { auto marker = mindflayer::recovery::makeMarker(); ESP.rtcUserMemoryWrite(mindflayer::recovery::RTC_OFFSET, (uint32_t*)&marker, sizeof(marker)); }
+
 static void setColors(uint8_t r1, uint8_t g1, uint8_t b1, uint8_t r2, uint8_t g2, uint8_t b2) {
-  ledStrip.SetPixelColor(0, RgbColor(r1, g1, b1)); ledStrip.SetPixelColor(1, RgbColor(r2, g2, b2)); ledStrip.Show();
+  if (!ledStrip) return;
+  ledStrip->SetPixelColor(0, RgbColor(r1, g1, b1)); ledStrip->SetPixelColor(1, RgbColor(r2, g2, b2)); ledStrip->Show();
 }
 static void base64Url(const uint8_t input[32], char output[44]) {
   static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"; size_t in = 0, out = 0;
@@ -94,16 +108,19 @@ static void processSerialProvisioning() {
 void setup() {
   Serial.setRxBufferSize(provisioning::MAX_ENVELOPE_SIZE + 16); Serial.begin(115200); Serial.println(); Serial.printf("Mind Flayer %s booting; heap=%u; flash-real=%lu; flash-configured=%lu\n", FIRMWARE_VERSION, ESP.getFreeHeap(), (unsigned long)ESP.getFlashChipRealSize(), (unsigned long)ESP.getFlashChipSize()); Update.installSignature(&firmwareHash, &firmwareVerifier);
   provisioning::Selection selected;
-  if (!provisioning::loadStored(settings, &selected)) { Serial.println("UNPROVISIONED; awaiting MFP1 serial provisioning envelope"); return; }
+  if (!provisioning::loadStored(settings, &selected)) { clearRecoveryMarker(); Serial.println("UNPROVISIONED; NeoPixel DMA disabled; awaiting MFP1 serial provisioning envelope"); return; }
   Serial.printf("Provisioning copy %c generation %lu loaded\n", selected.copy == provisioning::COPY_A ? 'A' : 'B', (unsigned long)selected.generation);
   serverPublicKey = new BearSSL::PublicKey(settings.serverPublicKey, settings.serverPublicKeyLength); if (!serverPublicKey->isRSA() && !serverPublicKey->isEC()) { Serial.println("UNPROVISIONED; invalid server public key"); return; }
-  provisioned = true; ledStrip.Begin(); setColors(255, 0, 0, 0, 0, 0); WiFi.hostname(settings.deviceId); WiFi.begin(settings.ssid, settings.wifiPassword);
-  Serial.print("Connecting to provisioned Wi-Fi"); while (WiFi.status() != WL_CONNECTED) { processSerialProvisioning(); Serial.print('.'); delay(500); }
+  if (consumeRecoveryMarker()) { Serial.println("SERIAL PROVISIONING MODE; NeoPixel DMA disabled on GPIO3/RXD0"); return; }
+  armRecoveryMarker(); Serial.println("Double-reset recovery window open"); delay(mindflayer::recovery::WINDOW_MS); clearRecoveryMarker();
+  ledStrip = new (ledStripStorage) LedStrip(2, NEOPIXEL_DATA_PIN); ledStrip->Begin(); setColors(255, 0, 0, 0, 0, 0); Serial.println("NeoPixel DMA active on physical GPIO3/RXD0; serial RX disabled");
+  provisioned = true; WiFi.hostname(settings.deviceId); WiFi.begin(settings.ssid, settings.wifiPassword);
+  Serial.print("Connecting to provisioned Wi-Fi"); while (WiFi.status() != WL_CONNECTED) { Serial.print('.'); delay(500); }
   Serial.printf(" connected: %s; heap=%u\n", WiFi.localIP().toString().c_str(), ESP.getFreeHeap()); KeyboardMatrix::initMatrix(); setupWebSocket();
 }
 void onKeyChange(KeyboardMatrix::KeyState* key) { size_t written; if (protocol::buildKeyEvent(frameBuffer, sizeof(frameBuffer), written, key->key, key->isDown)) sendFrame(written); }
 void loop() {
-  processSerialProvisioning(); if (!provisioned) { delay(10); return; } client.poll(); if (authenticated && client.available()) KeyboardMatrix::detectKeys(onKeyChange);
+  if (!provisioned) { processSerialProvisioning(); delay(10); return; } client.poll(); if (authenticated && client.available()) KeyboardMatrix::detectKeys(onKeyChange);
   if (reconnectRequested) { reconnectRequested = false; delay(500); client = WebsocketsClient(); setupWebSocket(); }
   if (client.available() && millis() - lastPong > 15000) { client.ping(); lastPong = millis(); }
 }
