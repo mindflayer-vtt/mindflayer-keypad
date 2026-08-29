@@ -254,8 +254,9 @@ void setupLEDs() {
 }
 
 void setupOTA() {
-  ArduinoOTA.begin(WiFi.localIP(), name, ota_password, InternalStorage);
-  MDNS.addService("ota", "tcp", 8266);
+  ArduinoOTA.setHostname(name);
+  ArduinoOTA.setPassword(ota_password);
+  ArduinoOTA.begin();
   Serial.println("OTA is setup ");
   Serial.println(WiFi.hostname());
   Serial.println(WiFi.localIP());
@@ -316,7 +317,7 @@ void handleRestartRequest() {
 }
 
 void loop() {
-  ArduinoOTA.poll();
+  ArduinoOTA.handle();
   client.poll();
   if (client.available()) {
     KeyboardMatrix::detectKeys(onKeyChange);
