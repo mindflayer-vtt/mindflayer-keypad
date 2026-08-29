@@ -179,15 +179,19 @@ void onMessageCallback(WebsocketsMessage message) {
   lastPong = time(nullptr);
   Serial.print("Got Message: ");
   Serial.println(message.data());
-  auto error = deserializeJson(jsonDoc, message.data());
-  if(!error && strcmp(jsonDoc["type"].as<char*>(), "configuration") == 0) {
+  mindflayer::protocol::Configuration configuration;
+  if(mindflayer::protocol::parseConfiguration(
+    jsonDoc,
+    message.data().c_str(),
+    configuration
+  )) {
     setColors(
-      jsonDoc["led1"]["r"].as<uint8_t>(),
-      jsonDoc["led1"]["g"].as<uint8_t>(),
-      jsonDoc["led1"]["b"].as<uint8_t>(),
-      jsonDoc["led2"]["r"].as<uint8_t>(),
-      jsonDoc["led2"]["g"].as<uint8_t>(),
-      jsonDoc["led2"]["b"].as<uint8_t>()
+      configuration.led1.r,
+      configuration.led1.g,
+      configuration.led1.b,
+      configuration.led2.r,
+      configuration.led2.g,
+      configuration.led2.b
     );
   }
 }

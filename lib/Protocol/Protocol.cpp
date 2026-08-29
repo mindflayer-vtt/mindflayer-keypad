@@ -1,6 +1,7 @@
 #include "Protocol.h"
 
 #include <stdio.h>
+#include <string.h>
 
 namespace mindflayer {
 namespace protocol {
@@ -39,6 +40,28 @@ bool buildKeyEvent(
 
 bool shouldRestart(bool qIsDown, bool shiftIsDown, bool spaceIsDown) {
   return qIsDown && shiftIsDown && spaceIsDown;
+}
+
+bool parseConfiguration(
+  DynamicJsonDocument& document,
+  const char* message,
+  Configuration& configuration
+) {
+  const DeserializationError error = deserializeJson(document, message);
+  if (error || strcmp(document["type"].as<const char*>(), "configuration") != 0) {
+    return false;
+  }
+  configuration.led1 = {
+    document["led1"]["r"].as<uint8_t>(),
+    document["led1"]["g"].as<uint8_t>(),
+    document["led1"]["b"].as<uint8_t>()
+  };
+  configuration.led2 = {
+    document["led2"]["r"].as<uint8_t>(),
+    document["led2"]["g"].as<uint8_t>(),
+    document["led2"]["b"].as<uint8_t>()
+  };
+  return true;
 }
 
 }
