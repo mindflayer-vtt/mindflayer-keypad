@@ -18,7 +18,8 @@ See [hardware/case/README.md](https://github.com/mindflayer-vtt/mindflayer-keypa
 ## Requirements
 You have to have set up the following software in order to compile an flash the controller:
 
- - Python
+ - Python 3
+ - PlatformIO 6.1.19
 
 ## Setup
 
@@ -32,12 +33,12 @@ You have to have set up the following software in order to compile an flash the 
    ```
 3. Install platformio
    ```bash
-   pip install platformio
+   pip install platformio==6.1.19
    ```
 
 ## Configuration
 
-1. Create a `include/config.h` file and add the WIFI_SSID, WIFI_PASS and WSS_URL variables
+1. Copy `include/config.example.h` to `include/config.h` and configure the Wi-Fi, WebSocket, and OTA values.
    ```cpp
    #define WIFI_SSID "<your ssid>"
    #define WIFI_PASS "<your wifi password>"
