@@ -25,6 +25,12 @@ namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 namespace protocol = mindflayer::protocol;
 namespace provisioning = mindflayer::provisioning;
 static uint8_t frameBuffer[protocol::MAX_DEVICE_FRAME_SIZE];
+static uint8_t pendingFrame[protocol::MAX_DEVICE_FRAME_SIZE];
+static size_t pendingFrameSize = 0;
+static uint8_t receivedFrame[protocol::MAX_DEVICE_FRAME_SIZE];
+static size_t receivedFrameSize = 0;
+static bool receivedFrameInvalid = false;
+static bool eventOpened = false, eventClosed = false, eventPing = false, eventPong = false;
 alignas(4) static uint8_t provisioningBuffer[provisioning::MAX_ENVELOPE_SIZE];
 static size_t provisioningReceived = 0, provisioningExpected = 0;
 static provisioning::Provisioning settings;
@@ -105,10 +111,10 @@ static void performUpdate(const protocol::UpdateAvailable& update) {
   const auto result = ESPhttpUpdate.update(http, FIRMWARE_VERSION); if (result == HTTP_UPDATE_FAILED) Serial.printf("OTA failed; retaining %s\n", FIRMWARE_VERSION); http.end();
 #endif
 }
-static void sendFrame(size_t size) { if (size && size <= sizeof(frameBuffer)) client.sendBinary((const char*)frameBuffer, size); }
-static void onMessage(WebsocketsMessage message) {
-  lastPong = millis(); if (!message.isBinary() || message.length() == 0 || message.length() > protocol::MAX_DEVICE_FRAME_SIZE) { Serial.println("Rejected non-binary or oversized device frame"); client.close(CloseReason_ProtocolError); return; }
-  const uint8_t* data = (const uint8_t*)message.c_str(); size_t size = message.length(); protocol::AuthChallenge challenge; size_t written;
+static void sendFrame(size_t size) { if (size && size <= sizeof(frameBuffer) && !pendingFrameSize) { memcpy(pendingFrame,frameBuffer,size); pendingFrameSize=size; } }
+static void flushFrame() { if (pendingFrameSize && client.available()) { size_t size=pendingFrameSize; pendingFrameSize=0; client.sendBinary((const char*)pendingFrame,size); } }
+static void processMessage(const uint8_t* data, size_t size) {
+  lastPong = millis(); protocol::AuthChallenge challenge; size_t written;
   if (protocol::parseAuthChallenge(data, size, challenge)) { if (protocol::buildAuthResponse(frameBuffer, sizeof(frameBuffer), written, settings.deviceId, settings.deviceSecret, challenge.challenge)) sendFrame(written); return; }
   protocol::AuthResult auth;
   if (protocol::parseAuthResult(data, size, auth)) {
@@ -130,15 +136,29 @@ static void onMessage(WebsocketsMessage message) {
   if (authenticated && protocol::parseConfiguration(data, size, configuration)) { setColors(configuration.led1.r, configuration.led1.g, configuration.led1.b, configuration.led2.r, configuration.led2.g, configuration.led2.b); return; }
   Serial.println("Rejected malformed or unauthorized CBOR message"); client.close(CloseReason_ProtocolError);
 }
+static void onMessage(WebsocketsMessage message) {
+  const size_t size = message.length();
+  if (!message.isBinary() || !size || size > sizeof(receivedFrame) || receivedFrameSize) { receivedFrameInvalid = true; return; }
+  memcpy(receivedFrame, message.c_str(), size); receivedFrameSize = size;
+}
 static void onEvent(WebsocketsEvent event, String) {
-  if (event == WebsocketsEvent::ConnectionOpened) { authenticated = false; wssHealthy = true; Serial.printf("Pinned binary WSS connected; heap=%u\n", ESP.getFreeHeap()); }
-  else if (event == WebsocketsEvent::ConnectionClosed) { authenticated = false; wssHealthy = registered = false; reconnectRequested = true; Serial.println("WSS closed; reconnecting"); }
-  else if (event == WebsocketsEvent::GotPing) client.pong(); else if (event == WebsocketsEvent::GotPong) lastPong = millis();
+  if (event == WebsocketsEvent::ConnectionOpened) eventOpened = true;
+  else if (event == WebsocketsEvent::ConnectionClosed) eventClosed = true;
+  else if (event == WebsocketsEvent::GotPing) eventPing = true;
+  else if (event == WebsocketsEvent::GotPong) eventPong = true;
+}
+static void processWebSocketCallbacks() {
+  if (eventOpened) { eventOpened = false; authenticated = false; wssHealthy = true; Serial.printf("Pinned binary WSS connected; heap=%u\n", ESP.getFreeHeap()); }
+  if (eventClosed) { eventClosed = false; authenticated = false; wssHealthy = registered = false; reconnectRequested = true; Serial.println("WSS closed; reconnecting"); }
+  if (eventPing) { eventPing = false; client.pong(); }
+  if (eventPong) { eventPong = false; lastPong = millis(); }
+  if (receivedFrameInvalid) { receivedFrameInvalid = false; receivedFrameSize = 0; Serial.println("Rejected non-binary, oversized, or overlapping device frame"); client.close(CloseReason_ProtocolError); return; }
+  if (receivedFrameSize) { const size_t size = receivedFrameSize; receivedFrameSize = 0; processMessage(receivedFrame, size); }
 }
 static void setupWebSocket() {
   client.onMessage(onMessage); client.onEvent(onEvent); client.setKnownKey(serverPublicKey);
   if (!client.connectSecure(settings.serverHost, settings.serverPort, "/device/v1")) { Serial.println("Pinned WSS connection failed"); reconnectRequested = true; return; }
-  client.ping(); lastPong = millis();
+  lastPong = millis();
 }
 static void processSerialProvisioning() {
   static const uint8_t magic[4] = {'M','F','P','1'};
@@ -177,9 +197,9 @@ void setup() {
   Serial.print("Connecting to provisioned Wi-Fi"); while (WiFi.status() != WL_CONNECTED) { Serial.print('.'); delay(500); }
   wifiHealthy = true; Serial.printf(" connected: %s; heap=%u\n", WiFi.localIP().toString().c_str(), ESP.getFreeHeap()); KeyboardMatrix::initMatrix(); setupWebSocket();
 }
-void onKeyChange(KeyboardMatrix::KeyState* key) { size_t written; if (protocol::buildKeyEvent(frameBuffer, sizeof(frameBuffer), written, key->key, key->isDown)) sendFrame(written); }
+void onKeyChange(KeyboardMatrix::KeyState* key) { size_t written; if (protocol::buildKeyEvent(frameBuffer, sizeof(frameBuffer), written, key->key, key->isDown)) client.sendBinary((const char*)frameBuffer,written); }
 void loop() {
-  if (!provisioned) { processSerialProvisioning(); delay(10); return; } client.poll(); if (authenticated && client.available()) KeyboardMatrix::detectKeys(onKeyChange);
+  if (!provisioned) { processSerialProvisioning(); delay(10); return; } client.poll(); processWebSocketCallbacks(); flushFrame(); if (authenticated && client.available()) KeyboardMatrix::detectKeys(onKeyChange);
 #ifdef RBOOT_INTEGRATION
   if (temporaryBoot && millis()-temporaryStarted > TEMPORARY_HEALTH_TIMEOUT_MS) { Serial.println("Temporary candidate health timeout; rebooting for rollback"); Serial.flush(); ESP.restart(); }
 #ifdef TEST_FAIL_BEFORE_SERVER_ACK
