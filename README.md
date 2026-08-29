@@ -36,14 +36,9 @@ You have to have set up the following software in order to compile an flash the 
    pip install platformio==6.1.19
    ```
 
-## Configuration
+## Generic firmware and provisioning
 
-1. Copy `include/config.example.h` to `include/config.h` and configure the Wi-Fi, WebSocket, and OTA values.
-   ```cpp
-   #define WIFI_SSID "<your ssid>"
-   #define WIFI_PASS "<your wifi password>"
-   #define WSS_URL   "<your websocketserver url>"
-   ```
+The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [PROVISIONING.md](PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.
 
 ## Flashing
 
@@ -55,9 +50,9 @@ You have to have set up the following software in order to compile an flash the 
 
 ## Secure server-managed updates
 
-Local `config.h` also receives a unique device secret, the server TLS public key, and the firmware-signing public key. The keypad validates the direct server through BearSSL `setKnownKey`; it never disables TLS validation, depends on public CA roots, pins a certificate fingerprint, or needs a device clock for server authentication.
+The keypad validates the provisioned direct-server key through BearSSL `setKnownKey`; it never disables TLS validation, depends on public CA roots, pins a certificate fingerprint, or needs a device clock for server authentication. The global firmware-signing public key remains compiled into every generic artifact; its private key remains outside Git, the server, and the keypad.
 
-Override `FIRMWARE_VERSION` at build time to produce rollout versions without editing source. After pinned WSS connects, the keypad completes HMAC-SHA256 challenge authentication and registers its controller ID, `mindflayer-keypad-v1` hardware ID and version. A targeted update is streamed from the same pinned HTTPS endpoint through the ESP8266 core updater using its short-lived bearer grant.
+Override `FIRMWARE_VERSION` at build time to produce rollout versions without editing source. After pinned WSS connects to `/device/v1`, the keypad exchanges only restricted binary CBOR, completes HMAC-SHA256 authentication, and registers its hardware ID and version. See [DEVICE_PROTOCOL.md](DEVICE_PROTOCOL.md).
 
 For a disposable local signing key and a framework-compatible signed artifact plus server manifest:
 
@@ -66,6 +61,8 @@ For a disposable local signing key and a framework-compatible signed artifact pl
 .venv/bin/pio run -e controller_1
 ./scripts/sign-firmware.sh .pio/build/controller_1/firmware.bin keys/signing-private.pem mindflayer-keypad-v1 1.2.3 artifacts
 ```
+
+`include/HardwareConfig.h` is the global firmware-signing trust domain. Its public key must match the private key used by the signing command; generating a replacement keypair requires deliberately updating that global public key and rebuilding all generic firmware. Provisioning never changes this key.
 
 The private key and artifacts are ignored. Generate the production RSA signing key separately, protect and back it up offline or in a dedicated CI secret, and never copy it into the server container. Only its public key belongs in firmware. The code installs the ESP8266 core `SigningVerifier`, so modified or unsigned OTA artifacts are rejected.
 

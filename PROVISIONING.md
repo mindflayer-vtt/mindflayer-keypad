@@ -1,0 +1,54 @@
+# Mind Flayer Provisioning Format v1
+
+One generic signed firmware contains hardware definitions, QCBOR, the device protocol, and the firmware-signing public key. Installation data is supplied later over trusted serial and stored in two dedicated raw flash sectors. No filesystem, device ID, HMAC secret, Wi-Fi credential, server address, or server TLS key participates in compiling or signing `firmware.bin`.
+
+## Serial request envelope
+
+The host sends exactly: bytes 0..3 magic `MFP1`; byte 4 envelope version `1`; bytes 5..6 unsigned big-endian CBOR payload length (1..1024); the payload; then a big-endian CRC32. CRC covers magic, version, length, and payload. The variant is CRC-32/ISO-HDLC (reflected polynomial `0xEDB88320`, init/xorout `0xFFFFFFFF`), whose `123456789` check is `0xCBF43926`. Maximum envelope size is 1,035 bytes.
+
+The definite-length CBOR map uses integer keys: `0` schema version 1; `1` device ID text 1..64; `2` exactly 32 secret bytes; `3` SSID text 1..32; `4` Wi-Fi password text 0..63; `5` server host text 1..253; `6` port 1..65535; `7` DER/SPKI RSA server public key bytes 32..512. All keys are required. Duplicate, unsupported, missing, mistyped or oversized fields, unsupported versions, invalid DER, indefinite encodings, trailing bytes, or invalid CRC are rejected. Version 1 rejects unknown keys; a future schema version must define its own policy.
+
+## Physical flash layout
+
+The target has 4 MiB flash. The addresses are centralized and compile-time asserted in `lib/Provisioning/FlashLayout.h`:
+
+| Range | Owner |
+|---|---|
+| `0x000000..0x0FFFFF` | current normal eboot plus sketch region; the linker caps the application below `0x100000` |
+| `0x100000..0x2FFFFF` | current ordinary OTA staging/reserved space; the zero-byte filesystem boundary at `0x300000` is its hard upper bound |
+| `0x002000..0x0FFFFF` | future rBoot slot A (rBoot itself occupies `0x000000..0x001FFF`) |
+| `0x202000..0x2FFFFF` | future rBoot slot B |
+| `0x3F9000..0x3F9FFF` | provisioning copy A |
+| `0x3FA000..0x3FAFFF` | provisioning copy B |
+| `0x3FB000..0x3FBFFF` | future 4 MiB Arduino EEPROM |
+| `0x3FC000..0x3FCFFF` | RF calibration |
+| `0x3FD000..0x3FFFFF` | SDK Wi-Fi parameters |
+
+Core 3.1.2 uses the repository-owned `ld/eagle.flash.4m0m.ld`: its image header advertises the actual 4 MiB geometry, its sketch region ends at `0x0FFFFF`, and its zero-length filesystem has both boundary symbols at `0x300000`. The normal eboot updater can therefore stage only below `0x300000`; it cannot reach `0x3F9000`. EEPROM is explicitly at `0x3FB000`, with RF calibration and SDK Wi-Fi state above it. The two provisioning sectors also lie above the proven future slot B end and below that framework tail. Compile-time assertions encode all of these boundaries. Runtime raw-flash operations additionally require a real flash size of at least 4 MiB and refuse every read, erase, or write outside the two owned sectors.
+
+No filesystem space is configured, mounted, generated, or parsed.
+
+## Redundant raw records
+
+Each 4 KiB sector independently contains: bytes 0..3 `MFR1`; byte 4 record version 1; bytes 5..8 generation uint32 big-endian; bytes 9..10 payload length big-endian; CBOR payload; CRC32 big-endian; erased padding; and the commit word `MFPC` in the final four sector bytes. CRC covers bytes 0 through the last payload byte, not the CRC or commit word. Fields are encoded explicitly; C structure padding is never persisted.
+
+To update, the store selects the inactive/older copy, erases only it, writes header+payload+CRC, reads and validates it without accepting it as committed, writes `MFPC` last, then reads and validates it again. The prior valid generation is untouched. Boot validates both independently and chooses the newest committed valid record using uint32 serial-number arithmetic (`candidate-reference` in `1..0x7fffffff`). The exactly half-range ambiguous case deterministically does not declare the candidate newer. One valid copy is sufficient; two invalid copies produce `UNPROVISIONED`.
+
+Power loss before erase changes nothing; after erase, during data writing, or before the commit word leaves the previous copy selected; after the commit word, either the previous or fully verified newer record is valid. Flash failure can still destroy data, but the algorithm never erases both copies in one update.
+
+## Serial provisioning and recovery
+
+Generate a bundle from the server's stored device secret and certificate public key, then send it to the reported stable serial path:
+
+```sh
+MINDFLAYER_DATA_DIR=data \
+MINDFLAYER_WIFI_SSID='temporary-ap' \
+MINDFLAYER_WIFI_PASSWORD='temporary-password' \
+MINDFLAYER_SERVER_HOST='10.42.0.1' \
+npm run device:bundle -- controller1 provisioning/controller1.provisioning.bin
+npm run device:serial-provision -- provisioning/controller1.provisioning.bin /dev/serial/by-path/...
+```
+
+Bundles are mode 0600 and ignored. The sender requires a stable `/dev/serial/by-path` path, releases GPIO0, pulses reset through FTDI RTS, waits for the application, sends the already validated bounded envelope, and waits for the device acknowledgement. No person needs to press reset. The device bounds and validates the envelope in RAM, writes only through `ProvisioningStore`, verifies persisted data, reports success, and reboots. Reprovisioning uses the alternate sector and increments generation. Physical serial access and raw flash access are trusted: CRC detects accidental corruption, not tampering. A physical attacker can extract the Wi-Fi password and HMAC secret; this is accepted for the ESP8266 threat model.
+
+The later rBoot integration is not included here. The proven experiment used rBoot 1.4.2 at pinned upstream commit `614f33685d0dd990fc4202f2409b0d2365eeaef3`, `BOOT_RTC_ENABLED`, `BOOT_BIG_FLASH`, `BOOT_CONFIG_CHKSUM`, and GCC 10.3.0. Its two-slot layout can reuse these sectors unchanged. Future temporary-image promotion should occur only after provisioning loads, Wi-Fi connects, the server TLS public key validates, WSS establishes, HMAC authentication succeeds, and the server acknowledges the candidate firmware version.
