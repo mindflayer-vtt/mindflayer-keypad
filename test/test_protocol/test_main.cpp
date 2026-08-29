@@ -61,7 +61,7 @@ void test_requires_q_shift_and_space_for_restart() {
 }
 
 void test_parses_canonical_led_configuration() {
-  DynamicJsonDocument document(1024);
+  JsonDocument document;
   mindflayer::protocol::Configuration configuration;
   TEST_ASSERT_TRUE(mindflayer::protocol::parseConfiguration(
     document,
@@ -79,7 +79,7 @@ void test_parses_canonical_led_configuration() {
 }
 
 void test_rejects_malformed_and_unrelated_configuration_messages() {
-  DynamicJsonDocument document(1024);
+  JsonDocument document;
   mindflayer::protocol::Configuration configuration;
   TEST_ASSERT_FALSE(mindflayer::protocol::parseConfiguration(
     document,

@@ -136,7 +136,7 @@ seoK24dHmt6tWmn/sbxX7Aa6TL/4mVlFoOgcaTJyVaY/BrY=
 WebsocketsClient client;
 boolean reconnect = false;
 time_t lastPong;
-DynamicJsonDocument jsonDoc(1024);
+JsonDocument jsonDoc;
 
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> ledStrip(NUM_LEDS);
 RgbColor leds[NUM_LEDS];

@@ -29,7 +29,7 @@ bool buildKeyEvent(
 );
 bool shouldRestart(bool qIsDown, bool shiftIsDown, bool spaceIsDown);
 bool parseConfiguration(
-  DynamicJsonDocument& document,
+  JsonDocument& document,
   const char* message,
   Configuration& configuration
 );
