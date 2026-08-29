@@ -46,9 +46,9 @@ prerequisite exists, so it has not been added to project configuration.
 
 ## Results and existing warnings
 
-- Native tests: 4 passed.
+- Native tests: 6 passed.
 - Firmware: RAM 31,736/81,920 bytes (38.7%).
-- Firmware: flash 435,091/958,448 bytes (45.4%).
+- Firmware: flash 435,123/958,448 bytes (45.4%).
 - ArduinoWebsockets 0.5.4 and ArduinoOTA 1.1.0 call the deprecated
   `WiFiServer::available()`; ESP8266 core 3.1.2 recommends `accept()`.
 - Under host Python 3.14, the framework's `elf2bin.py` emits two
