@@ -61,13 +61,15 @@ For a disposable local signing key and a framework-compatible signed artifact pl
 ```sh
 ./scripts/generate-test-signing-key.sh
 .venv/bin/pio run -e controller_1
-./scripts/sign-firmware.sh .pio/build/controller_1/firmware.bin keys/signing-private.pem mindflayer-keypad-v1 1.2.3 artifacts
+./scripts/build-rboot.sh
+.venv/bin/pio run -e controller_1_rboot
+./scripts/sign-firmware.sh .pio/build/controller_1_rboot/rboot-app.bin keys/signing-private.pem mindflayer-keypad-v1 1.2.3 artifacts
 ```
 
 `include/HardwareConfig.h` is the global firmware-signing trust domain. Its public key must match the private key used by the signing command; generating a replacement keypair requires deliberately updating that global public key and rebuilding all generic firmware. Provisioning never changes this key.
 
 The private key and artifacts are ignored. Generate the production RSA signing key separately, protect and back it up offline or in a dedicated CI secret, and never copy it into the server container. Only its public key belongs in firmware. The code installs the ESP8266 core `SigningVerifier`, so modified or unsigned OTA artifacts are rejected.
 
-Phase 1 has no dual-slot rollback. An incomplete or invalid update should retain the running firmware; a correctly signed but defective image can require serial recovery using the board's documented UART boot mode and a known-good image.
+The rBoot production path downloads this signed boot2 image into the inactive slot, validates transport hash, RSA signature, structure, and full IROM/RAM checksum, then boots it once. Promotion requires explicit server acceptance after the complete application health gate. See [OTA_BOOT.md](OTA_BOOT.md). The additive `controller_1` environment remains available as the pre-migration eboot build; it is not an rBoot OTA artifact.
 
 For isolated hardware tests, `scripts/hwtest-network-up.sh` creates a namespaced WPA2 2.4 GHz NetworkManager AP and stores credentials only under ignored `.hwtest/`. `scripts/hwtest-network-down.sh` removes only that generated profile. Always tear it down and confirm the original default route remains.

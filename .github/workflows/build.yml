@@ -14,9 +14,16 @@ jobs:
           python-version: '3.13'
       - name: Install PlatformIO Core
         run: python -m pip install platformio==6.1.19
-      - name: Create CI configuration
-        run: cp include/config.example.h include/config.h
-      - name: Run native tests
-        run: pio test -e native
-      - name: Compile controller firmware
+      - name: Run native and sanitizer tests
+        run: pio test -e native -e native_sanitize
+      - name: Compile normal controller firmware
         run: pio run -e controller_1
+      - name: Build pinned rBoot and rBoot application
+        run: |
+          scripts/build-rboot.sh
+          pio run -e controller_1_rboot
+          python scripts/verify-rboot-image.py \
+            --elf .pio/build/controller_1_rboot/firmware.elf \
+            --image .pio/build/controller_1_rboot/rboot-app.bin \
+            --esptool2 .pio/rboot-upstream/esptool2/esptool2
+          test "$(wc -c < .pio/rboot-artifacts/rboot.bin)" -le 4096

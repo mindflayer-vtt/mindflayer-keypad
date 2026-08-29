@@ -13,6 +13,7 @@ The first array item is an unsigned message type. Integer encodings are enums or
 | 4 | key event | `[4, key:uint 0..10, action:uint 0..1]` |
 | 5 | LED configuration | `[5, r1:uint8, g1:uint8, b1:uint8, r2:uint8, g2:uint8, b2:uint8]` |
 | 6 | update available | `[6, version:tstr .size (1..47), size:uint32 .gt 0, sha256:bstr .size 32, path:tstr .size (1..191), token:bstr .size 32]` |
+| 7 | firmware accepted | `[7, version:tstr .size (1..47)]` |
 
 Auth status is `0=OK`, `1=FAILED`. Action is `0=UP`, `1=DOWN`. Key codes are `0=Q, 1=W, 2=E, 3=A, 4=S, 5=D, 6=Z, 7=X, 8=C, 9=SHI, 10=SPC`.
 
@@ -29,6 +30,9 @@ These hexadecimal fixtures are normative and tested independently in Node and QC
 - W down: `83040101`
 - LED channels 1..6: `8705010203040506`
 - update `1.2.3`, size 123: `860665312e322e33187b5820` + 32 zero bytes + `712f6669726d776172652f612f312e322e335820` + `33` × 32
+- accepted firmware `1.2.3`: `820765312e322e33`
+
+Type 7 is not an authentication acknowledgement. The direct server sends it only after an authenticated registration reports a version acceptable for that device. A temporary rBoot candidate may use it as the final health-gate input; the server never sees or controls slot numbers.
 
 The HMAC input remains independent of CBOR: three unsigned-32-bit-big-endian-length-prefixed fields containing `mindflayer-device-auth-v1`, device ID UTF-8 bytes, and the raw 32-byte challenge.
 

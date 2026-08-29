@@ -91,5 +91,10 @@ bool parseUpdateAvailable(const uint8_t* frame, size_t size, UpdateAvailable& up
   if (!startArray(d, frame, size, 6) || !getUInt(d, 255, type) || type != UPDATE_AVAILABLE || !getText(d, update.version, sizeof(update.version)) || !getUInt(d, 0xffffffff, firmwareSize) || firmwareSize == 0 || !getBytes(d, update.sha256, 32) || !getText(d, update.path, sizeof(update.path)) || !getBytes(d, update.token, 32) || !finish(d)) return false;
   update.size = (uint32_t)firmwareSize; return true;
 }
+bool parseFirmwareAccepted(const uint8_t* frame, size_t size, FirmwareAccepted& accepted) {
+  QCBORDecodeContext d; uint64_t type;
+  return startArray(d, frame, size, 2) && getUInt(d, 255, type) && type == FIRMWARE_ACCEPTED &&
+         getText(d, accepted.version, sizeof(accepted.version)) && finish(d);
+}
 bool shouldRestart(bool q, bool shift, bool space) { return q && shift && space; }
 } }

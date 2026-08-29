@@ -1,0 +1,112 @@
+diff --git a/rboot.c b/rboot.c
+index d622f97..78904fd 100644
+--- a/rboot.c
++++ b/rboot.c
+@@ -252,6 +252,59 @@ static uint8_t calc_chksum(uint8_t *start, uint8_t *end) {
+ }
+ #endif
+ 
++#ifdef BOOT_TRANSACTIONAL_METADATA
++#define BOOT_METADATA_MAGIC 0x4d465242
++#define BOOT_METADATA_FORMAT 1
++#define BOOT_METADATA_COMMIT 0x434d4954
++#define BOOT_METADATA_B_ADDR MF_BOOT_METADATA_B
++#define BOOT_SLOT_A_ADDR MF_SLOT_A_START
++#define BOOT_SLOT_B_ADDR MF_SLOT_B_START
++typedef struct __attribute__((packed)) {
++	uint8_t magic, version, mode, current_rom, gpio_rom, count, unused[2];
++	uint32_t roms[MAX_ROMS];
++	uint8_t chksum;
++} metadata_config;
++typedef struct __attribute__((packed, aligned(4))) {
++	uint32_t magic, format, generation;
++	metadata_config config;
++	uint32_t crc32;
++} boot_metadata;
++
++static uint32_t metadata_crc32(uint8_t *data, uint32_t length) {
++	uint32_t crc = 0xffffffff;
++	uint8_t bit;
++	while (length--) {
++		crc ^= *data++;
++		for (bit = 0; bit < 8; bit++) crc = (crc >> 1) ^ (0xedb88320 & (0 - (crc & 1)));
++	}
++	return ~crc;
++}
++
++static uint8_t metadata_valid(boot_metadata *record, uint32_t address) {
++	uint32_t marker;
++	SPIRead(address + SECTOR_SIZE - 4, &marker, 4);
++	return marker == BOOT_METADATA_COMMIT && record->magic == BOOT_METADATA_MAGIC &&
++		record->format == BOOT_METADATA_FORMAT && record->config.magic == BOOT_CONFIG_MAGIC &&
++		record->config.version == BOOT_CONFIG_VERSION && record->config.count == 2 &&
++		record->config.current_rom < 2 && record->config.roms[0] == BOOT_SLOT_A_ADDR &&
++		record->config.roms[1] == BOOT_SLOT_B_ADDR &&
++		record->config.chksum == calc_chksum((uint8_t*)&record->config, (uint8_t*)&record->config.chksum) &&
++		record->crc32 == metadata_crc32((uint8_t*)record, (uint32_t)((uint8_t*)&record->crc32 - (uint8_t*)record));
++}
++
++static uint8_t read_metadata(rboot_config *config) {
++	boot_metadata a, b;
++	uint8_t av, bv;
++	SPIRead(BOOT_CONFIG_SECTOR * SECTOR_SIZE, &a, sizeof(a));
++	SPIRead(BOOT_METADATA_B_ADDR, &b, sizeof(b));
++	av = metadata_valid(&a, BOOT_CONFIG_SECTOR * SECTOR_SIZE);
++	bv = metadata_valid(&b, BOOT_METADATA_B_ADDR);
++	if (!av && !bv) return 0;
++	ets_memcpy(config, bv && (!av || (int32_t)(b.generation - a.generation) > 0) ? &b.config : &a.config, sizeof(metadata_config));
++	return 1;
++}
++#endif
++
+ #ifndef BOOT_CUSTOM_DEFAULT_CONFIG
+ // populate the user fields of the default config
+ // created on first boot or in case of corruption
+@@ -402,6 +455,9 @@ uint32_t NOINLINE find_image(void) {
+ 	ets_printf("\r\n");
+ 
+ 	// read boot config
++#ifdef BOOT_TRANSACTIONAL_METADATA
++	if (!read_metadata(romconf)) {
++#else
+ 	SPIRead(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
+ 	// fresh install or old version?
+ 	if (romconf->magic != BOOT_CONFIG_MAGIC || romconf->version != BOOT_CONFIG_VERSION
+@@ -409,18 +465,25 @@ uint32_t NOINLINE find_image(void) {
+ 		|| romconf->chksum != calc_chksum((uint8_t*)romconf, (uint8_t*)&romconf->chksum)
+ #endif
+ 		) {
++#endif
+ 		// create a default config for a standard 2 rom setup
+-		ets_printf("Writing default boot config.\r\n");
++		ets_printf("Using safe default boot config.\r\n");
+ 		ets_memset(romconf, 0x00, sizeof(rboot_config));
+ 		romconf->magic = BOOT_CONFIG_MAGIC;
+ 		romconf->version = BOOT_CONFIG_VERSION;
+ 		default_config(romconf, flashsize);
++#ifdef BOOT_TRANSACTIONAL_METADATA
++		romconf->roms[0] = BOOT_SLOT_A_ADDR;
++		romconf->roms[1] = BOOT_SLOT_B_ADDR;
++#endif
+ #ifdef BOOT_CONFIG_CHKSUM
+ 		romconf->chksum = calc_chksum((uint8_t*)romconf, (uint8_t*)&romconf->chksum);
+ #endif
+ 		// write new config sector
++#ifndef BOOT_TRANSACTIONAL_METADATA
+ 		SPIEraseSector(BOOT_CONFIG_SECTOR);
+ 		SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
++#endif
+ 	}
+ 
+ 	// try rom selected in the config, unless overriden by gpio/temp boot
+@@ -524,8 +587,10 @@ uint32_t NOINLINE find_image(void) {
+ #ifdef BOOT_CONFIG_CHKSUM
+ 		romconf->chksum = calc_chksum((uint8_t*)romconf, (uint8_t*)&romconf->chksum);
+ #endif
++#ifndef BOOT_TRANSACTIONAL_METADATA
+ 		SPIEraseSector(BOOT_CONFIG_SECTOR);
+ 		SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
++#endif
+ 	}
+ 
+ #ifdef BOOT_RTC_ENABLED

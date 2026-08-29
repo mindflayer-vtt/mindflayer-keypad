@@ -14,17 +14,20 @@ The target has 4 MiB flash. The addresses are centralized and compile-time asser
 
 | Range | Owner |
 |---|---|
-| `0x000000..0x0FFFFF` | current normal eboot plus sketch region; the linker caps the application below `0x100000` |
-| `0x100000..0x2FFFFF` | current ordinary OTA staging/reserved space; the zero-byte filesystem boundary at `0x300000` is its hard upper bound |
-| `0x002000..0x0FFFFF` | future rBoot slot A (rBoot itself occupies `0x000000..0x001FFF`) |
-| `0x202000..0x2FFFFF` | future rBoot slot B |
+| `0x000000..0x000FFF` | rBoot 1.4.2 |
+| `0x001000..0x001FFF` | transactional boot metadata A |
+| `0x002000..0x0FFFFF` | rBoot slot A |
+| `0x100000..0x100FFF` | transactional boot metadata B |
+| `0x101000..0x201FFF` | reserved/free |
+| `0x202000..0x2FFFFF` | rBoot slot B |
+| `0x300000..0x3F8FFF` | reserved/free |
 | `0x3F9000..0x3F9FFF` | provisioning copy A |
 | `0x3FA000..0x3FAFFF` | provisioning copy B |
 | `0x3FB000..0x3FBFFF` | future 4 MiB Arduino EEPROM |
 | `0x3FC000..0x3FCFFF` | RF calibration |
 | `0x3FD000..0x3FFFFF` | SDK Wi-Fi parameters |
 
-Core 3.1.2 uses the repository-owned `ld/eagle.flash.4m0m.ld`: its image header advertises the actual 4 MiB geometry, its sketch region ends at `0x0FFFFF`, and its zero-length filesystem has both boundary symbols at `0x300000`. The normal eboot updater can therefore stage only below `0x300000`; it cannot reach `0x3F9000`. EEPROM is explicitly at `0x3FB000`, with RF calibration and SDK Wi-Fi state above it. The two provisioning sectors also lie above the proven future slot B end and below that framework tail. Compile-time assertions encode all of these boundaries. Runtime raw-flash operations additionally require a real flash size of at least 4 MiB and refuse every read, erase, or write outside the two owned sectors.
+Core 3.1.2 uses `ld/eagle.flash.4m-rboot.ld` for rBoot application images and `ld/eagle.flash.4m0m.ld` only for the retained pre-migration build. Both configure no filesystem. EEPROM is explicitly at `0x3FB000`, with RF calibration and SDK Wi-Fi state above it. Compile-time assertions encode bootloader, metadata, slot, provisioning, and framework-tail boundaries. Runtime provisioning flash operations still refuse every address outside the two provisioning sectors.
 
 No filesystem space is configured, mounted, generated, or parsed.
 
@@ -57,4 +60,4 @@ npm run device:serial-provision -- provisioning/controller1.provisioning.bin /de
 
 Bundles are mode 0600 and ignored. The sender requires a stable `/dev/serial/by-path` path, releases GPIO0, pulses reset twice through FTDI RTS to select recovery mode, waits for the application, sends the already validated bounded envelope, and waits for the device acknowledgement. The same sequence also works on an unprovisioned device. No person needs to press reset. The device bounds and validates the envelope in RAM, writes only through `ProvisioningStore`, verifies persisted data, reports success, and reboots. Reprovisioning uses the alternate sector and increments generation. Physical serial access and raw flash access are trusted: CRC detects accidental corruption, not tampering. A physical attacker can extract the Wi-Fi password and HMAC secret; this is accepted for the ESP8266 threat model.
 
-The later rBoot integration is not included here. The proven experiment used rBoot 1.4.2 at pinned upstream commit `614f33685d0dd990fc4202f2409b0d2365eeaef3`, `BOOT_RTC_ENABLED`, `BOOT_BIG_FLASH`, `BOOT_CONFIG_CHKSUM`, and GCC 10.3.0. Its two-slot layout can reuse these sectors unchanged. Future temporary-image promotion should occur only after provisioning loads, Wi-Fi connects, the server TLS public key validates, WSS establishes, HMAC authentication succeeds, and the server acknowledges the candidate firmware version.
+rBoot is integrated without changing this store. Slot writes end at `0x300000`, so neither OTA nor promotion touches provisioning. The one-time installer hashes both sectors before and after migration. Normal A/B OTA requires them to remain byte-identical.
