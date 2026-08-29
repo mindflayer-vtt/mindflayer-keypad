@@ -106,6 +106,16 @@ static void performUpdate(const protocol::UpdateAvailable& update) {
   ok = ok && received==update.size && memcmp(otaDigest,update.sha256,32)==0 && encodedLength==signatureSize &&
        firmwareVerifier.verify(&firmwareHash,otaSignature,signatureSize) && writer.finish();
   if (!ok) { Serial.println("Signed rBoot OTA rejected; permanent slot unchanged"); writer.abort(); http.end(); return; }
+#ifdef TEST_CORRUPT_CANDIDATE_AFTER_VALIDATION
+  // boot2 bytes 0x10 onward are the checksummed IROM payload. Clear one bit
+  // without an erase, after application validation but before temporary boot.
+  const uint32_t address = RBootSlot::slotStart(target) + 0x20;
+  uint32_t word;
+  const bool readable = RBootSlot::validAbsoluteRange(target, address, sizeof(word)) && slotFlash.read(address, &word, sizeof(word));
+  const bool corrupted = readable && word && ((word &= word - 1), slotFlash.write(address, &word, sizeof(word)));
+  if (!corrupted) { Serial.println("TEST: unable to corrupt validated inactive image safely"); http.end(); return; }
+  Serial.println("TEST: corrupted validated inactive image before temporary boot");
+#endif
   Serial.printf("Validated candidate in slot %c; requesting temporary boot\n", target==RBootSlot::Slot::A?'A':'B'); http.end();
   if (!BootControl::bootTemporary(static_cast<uint8_t>(target))) { Serial.println("Temporary boot request failed"); return; }
   Serial.flush(); ESP.restart();
@@ -140,7 +150,14 @@ static void processMessage(const uint8_t* data, size_t size) {
   if (authenticated && protocol::parseFirmwareAccepted(data, size, accepted)) {
 #ifdef RBOOT_INTEGRATION
     const mindflayer::health::State health = {temporaryBoot, provisioned, true, wifiHealthy, serverPublicKey != nullptr, wssHealthy, authenticated, registered, true, !strcmp(accepted.version, FIRMWARE_VERSION)};
-    if (mindflayer::health::shouldPromote(health)) { Serial.println("Server accepted candidate; promoting transactionally"); if (BootControl::promoteCurrentSlot()) { Serial.flush(); ESP.restart(); } else Serial.println("Candidate promotion failed"); }
+    if (mindflayer::health::shouldPromote(health)) {
+      Serial.println("Server accepted candidate; promoting transactionally");
+#if defined(RBOOT_FAULT_INJECTION) && defined(RBOOT_PROMOTION_RESET_STAGE)
+      if (!BootControl::promoteCurrentSlotWithReset(RBOOT_PROMOTION_RESET_STAGE)) Serial.println("Candidate promotion fault test failed to start");
+#else
+      if (BootControl::promoteCurrentSlot()) { Serial.flush(); ESP.restart(); } else Serial.println("Candidate promotion failed");
+#endif
+    }
 #endif
     return;
   }

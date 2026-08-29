@@ -56,4 +56,22 @@ CI covers native/sanitizer state machines, layout, boot2 equivalence, strong-sym
 
 ## Integrated resource measurements
 
-The final local Core 3.1.2/GCC 10.3.0 production rBoot build uses 38,632/81,920 bytes static RAM and 433,807 bytes of linked flash. Its boot2 image is 433,888/1,040,384 bytes (41.70%), leaving 606,496 bytes (58.30%) in either slot. The retained normal build uses 38,276 bytes RAM and 443,975 linked flash bytes. rBoot is 2,688/4,096 bytes; each transactional metadata copy uses one 4 KiB sector, with its commit marker in the final four bytes.
+The final local Core 3.1.2/GCC 10.3.0 production rBoot build uses 40,892/81,920 bytes static RAM and 434,019 bytes of linked flash. Its boot2 image is 434,096/1,040,384 bytes (41.72%), leaving 606,288 bytes (58.28%) in either slot. The retained normal build uses 39,332 bytes RAM and 444,263 linked flash bytes. rBoot is 2,688/4,096 bytes; each transactional metadata copy uses one 4 KiB sector, with its commit marker in the final four bytes.
+
+## Integrated hardware validation
+
+The production integration was exercised on the Phase 1 ESP8266 only: USB topology `4.1`, stable `/dev/serial/by-path/pci-0000:2a:00.3-usb-0:4.1:1.0-port0`, MAC `3c:61:05:cf:d1:54`, 4 MiB flash, kernel `7.2.2-1-cachyos`. Port `4.2` was never opened, reset, or flashed. FTDI RTS supplied all resets without physical intervention.
+
+The observed matrix covered:
+
+- one-time installation and permanent slot-A boot;
+- signed A-to-B streaming, temporary B health, server acceptance, transactional promotion, and permanent B reboot;
+- software reset before acceptance, which returned an unhealthy temporary candidate to the committed slot without entering serial recovery;
+- an artifact signed by an unauthorized key, which was rejected before selection;
+- reset after metadata body verification but before its commit marker, which retained the older committed slot;
+- reset immediately after the metadata commit marker, which retained the newly committed slot;
+- one-bit corruption inside the inactive boot2 IROM payload after application validation, for which rBoot printed `Temp boot rom (1) is bad` and watchdog-fell back to the permanent slot;
+- automated permanent-firmware double reset, which entered serial provisioning mode with GPIO3 DMA disabled, followed by a normal single-reset boot;
+- final healthy `0.1.9-rboot-hwtest-final.2` boot, provisioning load, Wi-Fi, pinned TLS/WSS, HMAC authentication, and registration.
+
+Provisioning copies were read directly before and after the full OTA/fault matrix and compared byte-for-byte. Copy A remained SHA-256 `0ef48340f03ca22a368a85108cf797f593d6b651430dab76f013123ecba30cee`; copy B remained `6da5088e22014dce3af2e7a4b532ccb340661685a9629f46cb1937c7d819bb19`.
