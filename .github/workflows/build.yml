@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches:
+      - '**'
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
@@ -83,7 +85,7 @@ jobs:
             mindflayer-keypad-v1 \
             "${{ steps.version.outputs.version }}" \
             dist/firmware
-          tar -C dist -czf "dist/mindflayer-keypad-${{ steps.version.outputs.version }}-server-firmware.tar.gz" firmware
+          tar -C dist/firmware -czf "dist/mindflayer-keypad-${{ steps.version.outputs.version }}-server-firmware.tar.gz" .
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -94,6 +96,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            "dist/mindflayer-keypad-${{ steps.version.outputs.version }}-server-firmware.tar.gz" \
-            --verify-tag --generate-notes
+          asset="dist/mindflayer-keypad-${{ steps.version.outputs.version }}-server-firmware.tar.gz"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$asset" --verify-tag --generate-notes
+          fi
