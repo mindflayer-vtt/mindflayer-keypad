@@ -39,7 +39,7 @@ static bool validUtf8(const uint8_t* s, size_t n) {
   for(size_t i=0;i<n;){uint8_t c=s[i++];if(c<0x80)continue;size_t more;uint32_t cp;if((c&0xe0)==0xc0){more=1;cp=c&0x1f;if(cp<2)return false;}else if((c&0xf0)==0xe0){more=2;cp=c&0x0f;}else if((c&0xf8)==0xf0){more=3;cp=c&7;}else return false;if(i+more>n)return false;for(size_t j=0;j<more;j++){uint8_t x=s[i++];if((x&0xc0)!=0x80)return false;cp=(cp<<6)|(x&0x3f);}if((more==2&&cp<0x800)||(more==3&&cp<0x10000)||cp>0x10ffff||(cp>=0xd800&&cp<=0xdfff))return false;}return true;
 }
 static bool copyText(const QCBORItem& item, char* output, size_t maximum, bool password = false) {
-  if (item.uDataType != QCBOR_TYPE_TEXT_STRING || item.val.string.len > maximum || (!password && item.val.string.len == 0) || !validUtf8((const uint8_t*)item.val.string.ptr,item.val.string.len)) return false;
+  if (item.uDataType != QCBOR_TYPE_TEXT_STRING || item.val.string.len > maximum || (!password && item.val.string.len == 0) || memchr(item.val.string.ptr, 0, item.val.string.len) || !validUtf8((const uint8_t*)item.val.string.ptr,item.val.string.len)) return false;
   memcpy(output, item.val.string.ptr, item.val.string.len); output[item.val.string.len] = 0; return true;
 }
 bool decodePayload(const uint8_t* payload, size_t size, Provisioning& output) {
