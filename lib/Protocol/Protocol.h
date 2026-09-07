@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 namespace mindflayer { namespace protocol {
+constexpr uint8_t AUTH_CHALLENGE_VERSION = 1, PROTOCOL_VERSION = 2;
 constexpr size_t MAX_DEVICE_FRAME_SIZE = 512, MAX_DEVICE_ID = 64, MAX_VERSION = 47, MAX_HARDWARE_ID = 64, MAX_UPDATE_PATH = 191;
 enum MessageType : uint8_t { AUTH_CHALLENGE = 0, AUTH_RESPONSE = 1, AUTH_RESULT = 2, REGISTRATION = 3, KEY_EVENT = 4, CONFIGURATION = 5, UPDATE_AVAILABLE = 6, FIRMWARE_ACCEPTED = 7 };
 enum AuthStatus : uint8_t { AUTH_OK = 0, AUTH_FAILED = 1 };

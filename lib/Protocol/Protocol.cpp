@@ -12,8 +12,38 @@ extern "C" {
 #endif
 namespace mindflayer { namespace protocol {
 static const char* KEYS[] = {"Q", "W", "E", "A", "S", "D", "Z", "X", "C", "SHI", "SPC"};
+static bool preferredArgument(const uint8_t* frame, size_t size, size_t& offset, uint8_t expectedMajor) {
+  if (offset >= size) return false;
+  const uint8_t initial = frame[offset++], major = initial >> 5, additional = initial & 31;
+  if (major != expectedMajor || additional >= 28) return false;
+  uint64_t value = additional;
+  if (additional >= 24) {
+    const size_t width = static_cast<size_t>(1) << (additional - 24);
+    if (offset + width > size) return false;
+    value = 0; for (size_t i = 0; i < width; ++i) value = (value << 8) | frame[offset++];
+    const uint64_t minimum = additional == 24 ? 24 : (static_cast<uint64_t>(1) << (width * 4));
+    if (value < minimum) return false;
+  }
+  if ((major == 2 || major == 3) && (value > size - offset)) return false;
+  if (major == 2 || major == 3) offset += static_cast<size_t>(value);
+  return true;
+}
+static bool preferredRestrictedFrame(const uint8_t* frame, size_t size) {
+  if (!frame || !size) return false;
+  size_t offset = 0;
+  if (!preferredArgument(frame, size, offset, 4)) return false;
+  const size_t arity = frame[0] & 31;
+  if (arity >= 24) return false;
+  for (size_t i = 0; i < arity; ++i) {
+    if (offset >= size) return false;
+    const uint8_t major = frame[offset] >> 5;
+    if (major != 0 && major != 2 && major != 3) return false;
+    if (!preferredArgument(frame, size, offset, major)) return false;
+  }
+  return offset == size;
+}
 static bool startArray(QCBORDecodeContext& d, const uint8_t* frame, size_t size, uint16_t arity) {
-  if (!frame || size == 0 || size > MAX_DEVICE_FRAME_SIZE) return false;
+  if (!frame || size == 0 || size > MAX_DEVICE_FRAME_SIZE || !preferredRestrictedFrame(frame, size)) return false;
   QCBORDecode_Init(&d, {frame, size}, QCBOR_DECODE_MODE_NORMAL); QCBORItem item;
   return QCBORDecode_GetNext(&d, &item) == QCBOR_SUCCESS && item.uDataType == QCBOR_TYPE_ARRAY && item.val.uCount == arity;
 }
@@ -36,7 +66,7 @@ static bool validUtf8(const uint8_t* s, size_t n) {
   } return true;
 }
 static bool getText(QCBORDecodeContext& d, char* output, size_t capacity, bool allowEmpty = false) {
-  QCBORItem item; if (QCBORDecode_GetNext(&d, &item) != QCBOR_SUCCESS || item.uDataType != QCBOR_TYPE_TEXT_STRING || item.val.string.len >= capacity || (!allowEmpty && item.val.string.len == 0) || !validUtf8((const uint8_t*)item.val.string.ptr,item.val.string.len)) return false;
+  QCBORItem item; if (QCBORDecode_GetNext(&d, &item) != QCBOR_SUCCESS || item.uDataType != QCBOR_TYPE_TEXT_STRING || item.val.string.len >= capacity || (!allowEmpty && item.val.string.len == 0) || memchr(item.val.string.ptr, 0, item.val.string.len) || !validUtf8((const uint8_t*)item.val.string.ptr,item.val.string.len)) return false;
   memcpy(output, item.val.string.ptr, item.val.string.len); output[item.val.string.len] = 0; return true;
 }
 static bool finish(QCBORDecodeContext& d) { return QCBORDecode_Finish(&d) == QCBOR_SUCCESS; }
@@ -49,8 +79,16 @@ static bool finishEncode(QCBOREncodeContext& e, size_t& written) {
   written = encoded.len; return true;
 }
 static void addText(QCBOREncodeContext& e, const char* value) { QCBOREncode_AddText(&e, UsefulBuf_FromSZ(value)); }
+static bool startMessage(QCBORDecodeContext& d, const uint8_t* frame, size_t size, uint16_t arity, MessageType expected, uint8_t expectedVersion = PROTOCOL_VERSION) {
+  uint64_t type, version;
+  return startArray(d, frame, size, arity) && getUInt(d, 255, type) && type == expected &&
+         getUInt(d, 255, version) && version == expectedVersion;
+}
+static void addMessageHeader(QCBOREncodeContext& e, MessageType type) {
+  QCBOREncode_AddUInt64(&e, type); QCBOREncode_AddUInt64(&e, PROTOCOL_VERSION);
+}
 bool parseAuthChallenge(const uint8_t* frame, size_t size, AuthChallenge& challenge) {
-  QCBORDecodeContext d; uint64_t type, version; return startArray(d, frame, size, 3) && getUInt(d, 255, type) && type == AUTH_CHALLENGE && getUInt(d, 255, version) && version == 1 && getBytes(d, challenge.challenge, 32) && finish(d);
+  QCBORDecodeContext d; return startMessage(d, frame, size, 3, AUTH_CHALLENGE, AUTH_CHALLENGE_VERSION) && getBytes(d, challenge.challenge, 32) && finish(d);
 }
 static void appendField(uint8_t* input, size_t& offset, const void* value, size_t length) {
   input[offset++] = (length >> 24) & 0xff; input[offset++] = (length >> 16) & 0xff; input[offset++] = (length >> 8) & 0xff; input[offset++] = length & 0xff;
@@ -66,35 +104,34 @@ bool buildAuthResponse(uint8_t* output, size_t outputSize, size_t& written, cons
 #else
   br_hmac_key_context key; br_hmac_context context; br_hmac_key_init(&key, &br_sha256_vtable, secret, 32); br_hmac_init(&context, &key, 0); br_hmac_update(&context, input, inputLength); br_hmac_out(&context, digest);
 #endif
-  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; QCBOREncode_AddUInt64(&e, AUTH_RESPONSE); addText(e, deviceId); QCBOREncode_AddBytes(&e, {digest, sizeof(digest)}); return finishEncode(e, written);
+  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; addMessageHeader(e, AUTH_RESPONSE); addText(e, deviceId); QCBOREncode_AddBytes(&e, {digest, sizeof(digest)}); return finishEncode(e, written);
 }
 bool parseAuthResult(const uint8_t* frame, size_t size, AuthResult& result) {
-  QCBORDecodeContext d; uint64_t type, status; if (!startArray(d, frame, size, 3) || !getUInt(d, 255, type) || type != AUTH_RESULT || !getUInt(d, 1, status) || !getText(d, result.deviceId, sizeof(result.deviceId), status == AUTH_FAILED) || !finish(d)) return false;
+  QCBORDecodeContext d; uint64_t status; if (!startMessage(d, frame, size, 4, AUTH_RESULT) || !getUInt(d, 1, status) || !getText(d, result.deviceId, sizeof(result.deviceId), status == AUTH_FAILED) || !finish(d)) return false;
   result.status = static_cast<AuthStatus>(status); return true;
 }
 bool buildRegistration(uint8_t* output, size_t outputSize, size_t& written, const char* firmware, const char* hardware) {
   if (!firmware || !hardware || strlen(firmware) == 0 || strlen(firmware) > MAX_VERSION || strlen(hardware) == 0 || strlen(hardware) > MAX_HARDWARE_ID) return false;
-  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; QCBOREncode_AddUInt64(&e, REGISTRATION); addText(e, firmware); addText(e, hardware); return finishEncode(e, written);
+  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; addMessageHeader(e, REGISTRATION); addText(e, firmware); addText(e, hardware); return finishEncode(e, written);
 }
 bool buildKeyEvent(uint8_t* output, size_t outputSize, size_t& written, const char* key, bool isDown) {
   size_t code = 0; while (code < sizeof(KEYS) / sizeof(KEYS[0]) && strcmp(KEYS[code], key)) code++; if (code == sizeof(KEYS) / sizeof(KEYS[0])) return false;
-  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; QCBOREncode_AddUInt64(&e, KEY_EVENT); QCBOREncode_AddUInt64(&e, code); QCBOREncode_AddUInt64(&e, isDown ? ACTION_DOWN : ACTION_UP); return finishEncode(e, written);
+  QCBOREncodeContext e; if (!startEncode(e, output, outputSize)) return false; addMessageHeader(e, KEY_EVENT); QCBOREncode_AddUInt64(&e, code); QCBOREncode_AddUInt64(&e, isDown ? ACTION_DOWN : ACTION_UP); return finishEncode(e, written);
 }
 bool parseConfiguration(const uint8_t* frame, size_t size, Configuration& configuration) {
-  QCBORDecodeContext d; uint64_t type, c[6]; if (!startArray(d, frame, size, 7) || !getUInt(d, 255, type) || type != CONFIGURATION) return false;
+  QCBORDecodeContext d; uint64_t c[6]; if (!startMessage(d, frame, size, 8, CONFIGURATION)) return false;
   for (uint8_t i = 0; i < 6; i++) if (!getUInt(d, 255, c[i])) return false;
   if (!finish(d)) return false;
   configuration = {{(uint8_t)c[0], (uint8_t)c[1], (uint8_t)c[2]}, {(uint8_t)c[3], (uint8_t)c[4], (uint8_t)c[5]}}; return true;
 }
 bool parseUpdateAvailable(const uint8_t* frame, size_t size, UpdateAvailable& update) {
-  QCBORDecodeContext d; uint64_t type, firmwareSize;
-  if (!startArray(d, frame, size, 6) || !getUInt(d, 255, type) || type != UPDATE_AVAILABLE || !getText(d, update.version, sizeof(update.version)) || !getUInt(d, 0xffffffff, firmwareSize) || firmwareSize == 0 || !getBytes(d, update.sha256, 32) || !getText(d, update.path, sizeof(update.path)) || !getBytes(d, update.token, 32) || !finish(d)) return false;
+  QCBORDecodeContext d; uint64_t firmwareSize;
+  if (!startMessage(d, frame, size, 7, UPDATE_AVAILABLE) || !getText(d, update.version, sizeof(update.version)) || !getUInt(d, 0xffffffff, firmwareSize) || firmwareSize == 0 || !getBytes(d, update.sha256, 32) || !getText(d, update.path, sizeof(update.path)) || !getBytes(d, update.token, 32) || !finish(d)) return false;
   update.size = (uint32_t)firmwareSize; return true;
 }
 bool parseFirmwareAccepted(const uint8_t* frame, size_t size, FirmwareAccepted& accepted) {
-  QCBORDecodeContext d; uint64_t type;
-  return startArray(d, frame, size, 2) && getUInt(d, 255, type) && type == FIRMWARE_ACCEPTED &&
-         getText(d, accepted.version, sizeof(accepted.version)) && finish(d);
+  QCBORDecodeContext d;
+  return startMessage(d, frame, size, 3, FIRMWARE_ACCEPTED) && getText(d, accepted.version, sizeof(accepted.version)) && finish(d);
 }
 bool shouldRestart(bool q, bool shift, bool space) { return q && shift && space; }
 } }
