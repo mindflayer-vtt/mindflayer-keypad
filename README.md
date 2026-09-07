@@ -72,7 +72,7 @@ The private key and artifacts are ignored. Generate the production RSA signing k
 
 ## Public firmware releases
 
-CI validates every push and pull request. A tag such as `v1.2.3` additionally builds the rBoot application with firmware version `1.2.3`, signs it, verifies the signature against the public key compiled into the keypad, and publishes `mindflayer-keypad-1.2.3-server-firmware.tar.gz`. Configure the GitHub Actions secret `FIRMWARE_SIGNING_PRIVATE_KEY` with the PEM-encoded production RSA private key before creating a release tag. A missing or mismatched key fails the release.
+CI validates every push and pull request. On `main`, semantic-release analyzes Conventional Commits, chooses the next semantic version, and—only when a release is due—builds the rBoot application with that version, signs it, verifies the signature against the public key compiled into the keypad, creates the `vX.Y.Z` tag and GitHub release, and publishes `mindflayer-keypad-X.Y.Z-server-firmware.tar.gz`. Configure the GitHub Actions secret `FIRMWARE_SIGNING_PRIVATE_KEY` with the PEM-encoded production RSA private key before merging a releasable commit. A missing or mismatched key fails before a release is published.
 
 Extract the release archive into the server's read-only firmware directory. It contains the complete repository layout expected by `mindflayer-server`:
 
@@ -81,7 +81,7 @@ manifest.json
 mindflayer-keypad-v1/1.2.3/firmware.bin.signed
 ```
 
-The manifest's hardware ID, semantic version, relative path, size, and SHA-256 match the server's firmware repository contract. The server can then target provisioned keypads at that version; it does not need and must never receive the signing key. GitHub workflow artifacts contain the same files inside an unpacked `firmware/` directory for validation and pre-release use.
+The manifest's hardware ID, semantic-release version, relative path, size, and SHA-256 match the server's firmware repository contract. The server can then target provisioned keypads at that version; it does not need and must never receive the signing key.
 
 The rBoot production path downloads this signed boot2 image into the inactive slot, validates transport hash, RSA signature, structure, and full IROM/RAM checksum, then boots it once. Promotion requires explicit server acceptance after the complete application health gate. See [OTA_BOOT.md](OTA_BOOT.md). The additive `controller_1` environment remains available as the pre-migration eboot build; it is not an rBoot OTA artifact.
 
