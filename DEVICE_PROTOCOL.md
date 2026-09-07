@@ -21,7 +21,7 @@ The profile rejects indefinite strings, arrays and maps; tags; floats; decimal f
 
 ## v1 migration
 
-Protocol v1 carried version `1` only in the initial challenge; its remaining frames were unversioned. The v2 server retains a bounded compatibility codec for those exact legacy arities so deployed v1 keypads can authenticate and receive a signed v2 firmware update. It records the version selected by the authentication response and encodes every response in that same version. It rejects mid-connection upgrades or downgrades. New keypad firmware emits and accepts only explicit v2 frames after the unchanged `[0, 1, challenge]` bootstrap. The legacy server path can be removed only after the deployed fleet has migrated.
+Protocol v1 carried version `1` only in the initial challenge; its remaining frames were unversioned. Deploy the v2 server before targeting any keypad with v2 firmware. The v2 server retains a bounded compatibility codec for those exact legacy arities so deployed v1 keypads can authenticate and receive a signed v2 firmware update. It records the version selected by the authentication response and encodes every response in that same version. It rejects mid-connection upgrades or downgrades. New keypad firmware emits and accepts only explicit v2 frames after the unchanged `[0, 1, challenge]` bootstrap. The legacy server path can be removed only after the deployed fleet has migrated.
 
 ## Canonical fixtures
 
