@@ -27,6 +27,8 @@ Production uses rBoot 1.4.2 commit `614f33685d0dd990fc4202f2409b0d2365eeaef3` an
 
 CI signs `rboot-app.bin` with the offline/CI RSA private key and publishes only the signed application plus size and SHA-256 metadata. The server stores it and never receives a private signing key. rBoot and initial metadata are serial-install artifacts, not OTA artifacts.
 
+Release tags publish those files as a ready-to-extract `firmware/` repository archive. The archive root includes `manifest.json`, so it can be mounted at `MINDFLAYER_FIRMWARE_DIR` without renaming or rewriting paths. The release job verifies both the signed trailer and that the signing private key corresponds to the firmware's committed public trust anchor before publishing anything.
+
 ## Experiment-to-production integration
 
 The separate `mindflayer-keypad-rboot` worktree was evidence, not a source package. The production integration deliberately classified its pieces as follows:

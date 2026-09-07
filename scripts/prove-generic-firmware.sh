@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
-pio="$repo_dir/.venv/bin/pio"
+if [[ -x "$repo_dir/.venv/bin/pio" ]]; then pio="$repo_dir/.venv/bin/pio"; else pio="$(command -v pio)"; fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 cd "$repo_dir"
