@@ -1,9 +1,9 @@
 # Public release audit — 2026-09-08
 
 The original audit found five high-priority defects and a historical credential
-requiring a retirement decision. The follow-up below records implemented fixes;
-the original findings remain as evidence about the audited revision. Hardware
-and deployment validation still determine public release readiness.
+requiring a retirement decision. The follow-up below records implemented fixes
+and owner decisions; the original findings remain as evidence about the audited
+revision, not a list of current release blockers.
 
 Audited firmware revision: `806bba4`. The latest commit was amended during the
 audit; the relevant source and signing-key findings were rechecked afterward.
@@ -40,8 +40,42 @@ passed. These are local results, not a claim that a GitHub release has run.
 
 See [TESTING.md](TESTING.md) for commands and coverage. No signing-key rotation,
 history rewrite, hardware flashing, or GitHub release publication was performed.
-The historical-credential decision, installer safeguards, and remaining hardware
-and production-release checks below still require attention.
+
+## Installer hardening and owner decisions — 2026-09-08
+
+The serial installer now validates all local inputs before serial access. It
+limits rBoot to 4 KiB, each metadata file to exactly 4 KiB, and the unsigned boot2
+application to the slot-A extent. Image headers, segment ranges, entry points,
+checksums, and exact endings are checked. Metadata must use the production layout
+and safely select slot A: A is committed, and B is either erased or committed to
+A. Invalid or torn metadata and signed OTA files are rejected.
+
+Both target checks require an ESP8266 and exactly 4 MiB of detected flash. The
+installer flashes validated snapshots, not potentially changed input files.
+Complete provisioning backups and their checksum manifest are saved with private
+permissions before writing; failed writes retain them. Readback still checks
+that provisioning is unchanged. This does not authenticate serial-install
+artifacts or make serial installation power-loss safe.
+
+Verification passed 29 installer tests, including the mocked full install and
+failure paths, plus the existing six startup and nine transport scenarios (31
+Python test methods total). The validators also accepted the existing built
+rBoot and production slot-A application. Black formatted the changed Python
+files; Prettier and C++ formatting checks passed. No serial device was accessed.
+
+The owner explicitly confirmed the following disposition:
+
+- The build was verified by the owner. Hardware validation of the exact candidate
+  is deferred until after the first version is released.
+- Remaining production release verification, including signing, archive contents,
+  and server import, is also deferred until after the first release. These are
+  outstanding checks, not successful validations claimed by this audit.
+- Credentials found only in history are considered legacy/disabled unless
+  visible in HEAD. The historical credential finding is closed on that owner
+  confirmation; no history rewrite or credential rotation was requested or done.
+
+The original recommendations below are retained for traceability and are
+superseded by these fixes and decisions where applicable.
 
 ## Original high-priority findings
 
@@ -143,7 +177,7 @@ Enforce the frame and aggregate-message limit before allocation, close the socke
 on violations, and bound incomplete reads. Validate oversized advertised lengths,
 fragmented oversized messages, and stalled payloads through the actual transport.
 
-## Credential history requiring a decision
+## Original credential-history finding
 
 Commit `b5466e7` contains a complete, parseable `client_private_key` in
 `src/main.cpp`, beginning at historical line 94. Removing it from the latest
@@ -161,7 +195,7 @@ credential from the publication history. No history rewrite, credential change,
 or production-private-key access was performed. The targeted history search is
 not a substitute for a comprehensive secret scanner.
 
-## Additional release concerns
+## Original additional release concerns
 
 - **Installer input validation:** `scripts/install-rboot.py:62` checks the chip
   family, but not the detected flash capacity, artifact sizes, metadata validity,

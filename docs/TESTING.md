@@ -15,4 +15,10 @@ The Python runner needs a host `g++` with AddressSanitizer and UndefinedBehavior
 
 `test/host/websocket_transport.cpp` compiles the pinned library's actual endpoint, client, message, and support sources with a fake TCP socket. Nine scenarios exercise exactly 512 bytes, oversized 16-bit and 64-bit length declarations, valid and oversized fragmentation with an interleaved ping, multiple buffered messages, one-byte TCP reads, and stalled header/body reads. An allocation guard prevents large advertised lengths from exhausting the test host. The oversized cases must disconnect at the header without reading a body, and two buffered messages must be delivered on separate polls. The corresponding regressions failed against the original transport before the fix.
 
-The SDK and TCP doubles model scheduling and transport behavior; they do not replace hardware verification of the exact candidate image, reset behavior, TLS, flash, keypad scanning, or LEDs. Keep the OTA/recovery hardware matrix in `OTA_BOOT.md` as the release validation requirement.
+`test/test_install_rboot.py` runs the installer with a mocked esptool interface and metadata produced by the real generator. It covers artifact size boundaries, corrupt images and metadata, unsafe slot selection, flash-capacity checks, backup failures, private backup permissions, pre-write manifests, failed writes, provisioning readback, and validated snapshots surviving source-file changes. Invalid local inputs must fail before any serial access; failed target checks or incomplete backups must prevent every flash write. A layout regression checks the installer's constants against the firmware header. Run this suite alone without a compiler or hardware:
+
+```sh
+python3 -m unittest discover -s test -p test_install_rboot.py
+```
+
+The SDK, TCP, and esptool doubles do not replace hardware verification of the exact candidate image, reset behavior, TLS, flash, keypad scanning, or LEDs. The owner has deferred the hardware matrix in `OTA_BOOT.md` and remaining production signing/archive/server-import checks until after the first release; they remain unverified for that release. See [release-audit.md](release-audit.md) for the recorded decision.

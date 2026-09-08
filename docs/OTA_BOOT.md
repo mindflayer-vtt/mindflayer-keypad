@@ -33,14 +33,14 @@ Semantic-release publishes those files as a ready-to-extract firmware repository
 
 The separate `mindflayer-keypad-rboot` worktree was evidence, not a source package. The production integration deliberately classified its pieces as follows:
 
-| Experimental piece                                                                    | Production disposition                                                                                     |
-| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| pinned rBoot/esptool2 build, big-flash linker contract, boot2 encoder, and ELF checks | integrated and hardened with CI byte/symbol/size verification                                              |
-| `BootControl`, slot writer, and temporary-boot RTC use                                | adapted behind application-facing abstractions with strict slot bounds                                     |
-| single-sector upstream rBoot config promotion                                         | replaced by redundant transactional metadata with generation, CRC, and last-written commit marker          |
-| serial experiment harness and `src/rboot_test.cpp`                                    | test-only; intentionally omitted from production firmware                                                  |
-| experiment `config.h`, private signing key, flash backups, and `.hwtest` state        | intentionally omitted; no device/installation secret enters a build or commit                              |
-| experiment slot A/B demo environments and direct flash commands                       | omitted from normal targets; replaced by the one-time topology-locked installer and authenticated OTA path |
+| Experimental piece                                                                    | Production disposition                                                                                      |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| pinned rBoot/esptool2 build, big-flash linker contract, boot2 encoder, and ELF checks | integrated and hardened with CI byte/symbol/size verification                                               |
+| `BootControl`, slot writer, and temporary-boot RTC use                                | adapted behind application-facing abstractions with strict slot bounds                                      |
+| single-sector upstream rBoot config promotion                                         | replaced by redundant transactional metadata with generation, CRC, and last-written commit marker           |
+| serial experiment harness and `src/rboot_test.cpp`                                    | test-only; intentionally omitted from production firmware                                                   |
+| experiment `config.h`, private signing key, flash backups, and `.hwtest` state        | intentionally omitted; no device/installation secret enters a build or commit                               |
+| experiment slot A/B demo environments and direct flash commands                       | omitted from normal targets; replaced by the one-time validated serial installer and authenticated OTA path |
 
 The health gate, server version acknowledgement, provisioning store, restricted-CBOR protocol, serial recovery isolation, and fault-injection builds are production integration work rather than transplanted experimental code. rBoot promotion is never inferred merely from reaching `setup()`.
 
@@ -55,7 +55,9 @@ python scripts/make-rboot-config.py .pio/rboot-artifacts/metadata-a.bin --slot a
 python scripts/make-rboot-config.py .pio/rboot-artifacts/metadata-b.bin --state erased
 ```
 
-Then use `scripts/install-rboot.py` with the serial port, the four artifacts, and a new backup directory. The installer uses esptool to require an ESP8266, but does not couple installation to a particular port topology, board name, or MAC address. It backs up only the two provisioning sectors, writes explicit bootloader/metadata/slot-A addresses, rereads provisioning, and requires identical SHA-256 values. esptool controls RTS/DTR on supported USB adapters, so no button press is normally required. It does not back up the old application binary and never erases the whole chip. The complete command sequence is in the top-level README.
+Then use `scripts/install-rboot.py` with the serial port, the four artifacts, and a new backup directory. The installer uses esptool to require an ESP8266 with exactly 4 MiB of detected flash, but does not couple installation to a particular port topology, board name, or MAC address. Before serial access it rejects empty, oversized, or malformed inputs: rBoot must fit its 4 KiB sector, metadata files must each be exactly 4 KiB, and the unsigned boot2 application must fit slot A (`0xfe000` bytes). Image validation checks the DIO/40 MHz/4 MiB headers, segment bounds, RAM ranges, entry points, and checksums, including boot2 IROM. Trailing signed-OTA data and normal Arduino `firmware.bin` images are rejected. Metadata A must be committed; metadata B may be erased or committed. Every committed record must pass both checksums and select slot A using the production layout, regardless of generation.
+
+Validated inputs are staged privately so source-file changes cannot alter the flashed bytes. The installer backs up only the two provisioning sectors, requires complete 4 KiB reads, and saves their SHA-256 manifest before any write. It rechecks chip family and flash size immediately before writing explicit bootloader/metadata/slot-A addresses, then rereads provisioning and requires identical hashes. The backup directory and files are owner-only because they contain credentials; retain them after failures as well as success. esptool controls RTS/DTR on supported USB adapters, so no button press is normally required. The installer does not authenticate build artifacts, back up the old application, or provide power-loss-safe serial installation, and never erases the whole chip. Use trusted builds and keep the same board connected throughout. The complete command sequence is in the top-level README.
 
 ## Update and rollback
 

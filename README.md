@@ -53,7 +53,7 @@ Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses 
 
 ## Initial rBoot installation
 
-The production OTA layout requires a one-time serial installation of rBoot, two transactional metadata sectors, and the application in slot A. Connect any supported 4 MiB ESP8266 board over USB serial and identify its port (prefer a stable `/dev/serial/by-id/...` or `/dev/serial/by-path/...` name). The installer accepts any port and MAC address, but asks esptool to identify the target and stops unless it is an ESP8266.
+The production OTA layout requires a one-time serial installation of rBoot, two transactional metadata sectors, and the application in slot A. Connect any supported 4 MiB ESP8266 board over USB serial and identify its port (prefer a stable `/dev/serial/by-id/...` or `/dev/serial/by-path/...` name). The installer accepts any port and MAC address, but asks esptool to identify the target and stops unless it is an ESP8266 with exactly 4 MiB of detected flash.
 
 Build the pinned bootloader and initial application, then generate the two metadata sectors. The bootloader script installs the ESP8266 packages, including the Xtensa compiler, before building:
 
@@ -76,7 +76,11 @@ Install them, replacing `PORT` with the connected ESP8266 serial device and choo
   --backup-dir .hwtest/initial-rboot-backup
 ```
 
-This writes only rBoot at `0x000000`, metadata at `0x001000` and `0x100000`, and slot A at `0x002000`. Before writing, it backs up both provisioning sectors (`0x3f9000` and `0x3fa000`); afterward it reads them again and requires identical SHA-256 digests. The backup directory must not already exist. Keep that directory until the keypad has booted and its provisioning has been verified. Installing rBoot replaces the existing application image, so do not interrupt the write or use this command for an ESP8266 with a different flash layout.
+Before touching the serial port, the installer validates artifact sizes, image headers, RAM ranges, entry points, and checksums. Metadata A must be committed and select slot A; metadata B must be erased or also validly select slot A. Both records must use the production layout. Slot A must be the unsigned `rboot-app.bin`, not Arduino's `firmware.bin` or a signed OTA artifact. Only the validated snapshots are flashed.
+
+This writes only rBoot at `0x000000`, metadata at `0x001000` and `0x100000`, and slot A at `0x002000`. Before writing, it backs up both provisioning sectors (`0x3f9000` and `0x3fa000`), requires complete 4 KiB reads, saves `sha256.txt`, and rechecks the chip family and flash size. Afterward it reads provisioning again and requires identical SHA-256 digests. The backup directory must not already exist. It is created owner-only because the backups contain provisioning credentials; keep it private and retain it until the keypad has booted and its provisioning has been verified, including after an interrupted or failed installation.
+
+Use trusted build artifacts: these structural checks do not authenticate the serial-install images. Installing rBoot replaces the existing application image and is not power-loss safe; an interrupted write may require another serial installation. Do not disconnect or swap the target during installation, or use this command for a different flash layout.
 
 For a blank device, install rBoot first and then perform the serial provisioning workflow in [docs/PROVISIONING.md](docs/PROVISIONING.md). For an already provisioned keypad, the preserved sectors allow the rBoot application to reuse its existing settings.
 
