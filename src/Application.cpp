@@ -15,6 +15,9 @@
 #ifdef RBOOT_INTEGRATION
 #include <BootControl.h>
 #include <RBootTestHooks.h>
+extern "C" {
+#include <user_interface.h>
+}
 #endif
 
 namespace {
@@ -22,6 +25,13 @@ namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 namespace provisioning = mindflayer::provisioning;
 #ifdef RBOOT_INTEGRATION
 constexpr uint32_t TEMPORARY_HEALTH_TIMEOUT_MS = 90000;
+os_timer_t temporaryHealthTimer;
+
+void restartUnhealthyCandidate(void*) {
+  // SDK timers run in SYS context, including during yielding Wi-Fi/TLS waits.
+  // Do not log, flush, or call ESP.restart(): its esp_suspend() requires CONT.
+  system_restart();
+}
 #endif
 } // namespace
 
@@ -33,10 +43,16 @@ void setup() {
   FirmwareUpdate::installSignatureVerifier();
 #ifdef RBOOT_INTEGRATION
   if (!BootControl::begin()) {
+    ESP.restart();
     return;
   }
   state.temporaryBoot = BootControl::isTemporaryBoot();
   state.temporaryStarted = millis();
+  os_timer_disarm(&temporaryHealthTimer);
+  if (state.temporaryBoot) {
+    os_timer_setfn(&temporaryHealthTimer, restartUnhealthyCandidate, nullptr);
+    os_timer_arm(&temporaryHealthTimer, TEMPORARY_HEALTH_TIMEOUT_MS, false);
+  }
 #endif
   provisioning::Selection selected;
   if (!provisioning::loadStored(state.settings, &selected)) {
@@ -86,6 +102,13 @@ void setup() {
 
 void loop() {
   ApplicationState& state = applicationState();
+#ifdef RBOOT_INTEGRATION
+  // Also check before every early-return path in the application loop.
+  if (state.temporaryBoot && millis() - state.temporaryStarted >= TEMPORARY_HEALTH_TIMEOUT_MS) {
+    ESP.restart();
+    return;
+  }
+#endif
   if (!state.provisioned) {
     SerialProvisioning::poll();
     delay(10);
@@ -94,11 +117,6 @@ void loop() {
   DeviceConnection::poll();
 #ifdef RBOOT_INTEGRATION
   const uint32_t temporaryElapsed = millis() - state.temporaryStarted;
-  if (state.temporaryBoot && temporaryElapsed > TEMPORARY_HEALTH_TIMEOUT_MS) {
-    DebugLog::println("Temporary candidate health timeout; rebooting for rollback");
-    DebugLog::flush();
-    ESP.restart();
-  }
   RBootTestHooks::maybeFailBeforeServerAcknowledgement(state.temporaryBoot, temporaryElapsed);
 #endif
 }
