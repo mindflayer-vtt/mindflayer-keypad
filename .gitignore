@@ -42,7 +42,12 @@
 # Config
 include/config.h
 *.provisioning.bin
-/keys/
+/keys/*
 /artifacts/
 /.hwtest/
 /node_modules/
+.briefing/
+/.gitlab-ci-lsp-cache/
+
+# include the firmware signing public key
+!/keys/firmware-signing-public.pem
