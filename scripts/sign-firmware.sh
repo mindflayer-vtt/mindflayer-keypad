@@ -13,7 +13,7 @@ unsigned="$1"; private="$2"; hardware="$3"; version="$4"; output_dir="$5"
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
 signer="${ESP8266_SIGNING_SCRIPT:-$HOME/.platformio/packages/framework-arduinoespressif8266/tools/signing.py}"
-public="${FIRMWARE_SIGNING_PUBLIC_KEY:-$repo_dir/scripts/firmware-signing-public.pem}"
+public="${FIRMWARE_SIGNING_PUBLIC_KEY:-$repo_dir/keys/firmware-signing-public.pem}"
 
 [[ -f "$unsigned" ]] || { echo "Unsigned firmware not found: $unsigned" >&2; exit 1; }
 [[ -f "$private" ]] || { echo "Signing key not found: $private" >&2; exit 1; }

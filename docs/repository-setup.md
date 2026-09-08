@@ -27,7 +27,7 @@ The GitHub release workflow is non-interactive, so the private key must not requ
 
 ### Configure the repository public key
 
-Copy only `signing-public.pem` to `scripts/firmware-signing-public.pem`. Replace `FIRMWARE_SIGNING_PUBLIC_KEY_PEM` in `include/HardwareConfig.h` with the exact same public PEM, represented as the existing newline-terminated C string.
+Copy only `signing-public.pem` to `keys/firmware-signing-public.pem` and commit it. This is the authoritative public-key file used by release signing. Replace `FIRMWARE_SIGNING_PUBLIC_KEY_PEM` in `include/HardwareConfig.h` with the exact same public PEM, represented as the existing newline-terminated C string. Do not create another public PEM under `scripts/`.
 
 Verify that the distributable public key and firmware trust anchor are identical:
 

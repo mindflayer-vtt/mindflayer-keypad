@@ -14,7 +14,7 @@ if not match:
     raise SystemExit("Unable to find FIRMWARE_SIGNING_PUBLIC_KEY_PEM")
 parts = re.findall(r'"((?:[^"\\]|\\.)*)"', match.group(1))
 compiled = bytes("".join(parts), "utf-8").decode("unicode_escape").encode()
-published = (root / "scripts" / "firmware-signing-public.pem").read_bytes()
+published = (root / "keys" / "firmware-signing-public.pem").read_bytes()
 def der(pem: bytes) -> bytes:
     lines = [line for line in pem.splitlines() if not line.startswith(b"-----")]
     return base64.b64decode(b"".join(lines), validate=True)

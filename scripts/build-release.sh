@@ -28,6 +28,7 @@ cleanup() {
 trap cleanup EXIT
 
 cd "$repo_dir"
+scripts/verify-signing-key.py
 if command -v pio >/dev/null 2>&1; then
   pio="$(command -v pio)"
 elif [[ -x "$repo_dir/.venv/bin/pio" ]]; then

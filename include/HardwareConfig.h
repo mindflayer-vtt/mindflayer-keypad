@@ -3,11 +3,11 @@
 #define NEOPIXEL_DATA_PIN 3
 #define FIRMWARE_SIGNING_PUBLIC_KEY_PEM                                                            \
   "-----BEGIN PUBLIC KEY-----\n"                                                                   \
-  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4wh2+u8aYuSQziJnnGO7\n"                             \
-  "xPo1QfMenF9wRE+5bIDibr0g9jbmKzPCXf7iJkrthzNxtuYLPOZzw8YIHxS/PdkV\n"                             \
-  "LGa/hoi43KrrBLNuHlkEHq1AriQCcpYYERDMsvkTNGH6aGLRaUWLY/S/XkcmWYed\n"                             \
-  "q8zb9/RopR0lXHRHZWOYqyp1NqV11LqSHSTdWr7xhGFQgaXkGaRw9PBgY489kgNW\n"                             \
-  "8cUqCiTDEx85G69OV9p1bMMU3QHT/Z6eWldolj+DHMMnDbioR0pVGRdJp8+8/ecZ\n"                             \
-  "Ep0uq2sga4YvWN7l23Xk3kEUtsSy9RqNODvs1AyVp+iYiDCSNKPDs+oZodPzVcz1\n"                             \
-  "RwIDAQAB\n"                                                                                     \
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2ehVgtICR8BmvoxzTsRt\n"                             \
+  "CXcULVGcYVx5loUIG81MJTYPwE3EEReeK4K4sTnA/EADduSB/G4eWK0XwD70ulBr\n"                             \
+  "CUUvbNqJ5bwlfCThoO6BQU6nacZBDGUIjC0d6ZbcsXRTLa7u4w6OdyUSFfYlzTL2\n"                             \
+  "UAzTOeFV8BDGif4jIWeKD8/Bdff4c5dH0AigZPyLuHJMHRvs6tLrwnUU8vpC+WQ0\n"                             \
+  "EFU4dAYtwGeSmSQg6yEvOgJ8jrOIxuQhNiuXhgMlLrFjsbvTEHXcPnaCzDM1svWl\n"                             \
+  "8K2iPiC7858TYspUPNqyb7NCm5L6jY63v20mhxLX/P4jj45pY3+Xfq9aU9NnhQgN\n"                             \
+  "mwIDAQAB\n"                                                                                     \
   "-----END PUBLIC KEY-----\n"
