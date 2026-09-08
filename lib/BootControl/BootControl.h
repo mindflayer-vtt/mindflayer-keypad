@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <RBootSlot.h>
+#include <stdint.h>
 
 namespace BootControl {
 
@@ -20,5 +20,4 @@ bool promoteCurrentSlot();
 bool promoteCurrentSlotWithReset(uint8_t stage);
 #endif
 
-}  // namespace BootControl
-
+} // namespace BootControl

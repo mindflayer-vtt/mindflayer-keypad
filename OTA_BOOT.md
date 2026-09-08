@@ -4,19 +4,19 @@ Production uses rBoot 1.4.2 commit `614f33685d0dd990fc4202f2409b0d2365eeaef3` an
 
 ## Layout
 
-| Start..end | Owner |
-|---|---|
-| `000000..000fff` | rBoot |
-| `001000..001fff` | boot metadata A |
+| Start..end       | Owner                   |
+| ---------------- | ----------------------- |
+| `000000..000fff` | rBoot                   |
+| `001000..001fff` | boot metadata A         |
 | `002000..0fffff` | slot A, 1,040,384 bytes |
-| `100000..100fff` | boot metadata B |
-| `101000..201fff` | reserved |
+| `100000..100fff` | boot metadata B         |
+| `101000..201fff` | reserved                |
 | `202000..2fffff` | slot B, 1,040,384 bytes |
-| `300000..3f8fff` | reserved |
-| `3f9000..3f9fff` | provisioning A |
-| `3fa000..3fafff` | provisioning B |
-| `3fb000..3fbfff` | Arduino EEPROM |
-| `3fc000..3fcfff` | RF calibration |
+| `300000..3f8fff` | reserved                |
+| `3f9000..3f9fff` | provisioning A          |
+| `3fa000..3fafff` | provisioning B          |
+| `3fb000..3fbfff` | Arduino EEPROM          |
+| `3fc000..3fcfff` | RF calibration          |
 | `3fd000..3fffff` | SDK Wi-Fi configuration |
 
 `FlashLayout.h` is authoritative. Static assertions and native tests prevent overlap. No filesystem exists.
@@ -33,14 +33,14 @@ Semantic-release publishes those files as a ready-to-extract firmware repository
 
 The separate `mindflayer-keypad-rboot` worktree was evidence, not a source package. The production integration deliberately classified its pieces as follows:
 
-| Experimental piece | Production disposition |
-|---|---|
-| pinned rBoot/esptool2 build, big-flash linker contract, boot2 encoder, and ELF checks | integrated and hardened with CI byte/symbol/size verification |
-| `BootControl`, slot writer, and temporary-boot RTC use | adapted behind application-facing abstractions with strict slot bounds |
-| single-sector upstream rBoot config promotion | replaced by redundant transactional metadata with generation, CRC, and last-written commit marker |
-| serial experiment harness and `src/rboot_test.cpp` | test-only; intentionally omitted from production firmware |
-| experiment `config.h`, private signing key, flash backups, and `.hwtest` state | intentionally omitted; no device/installation secret enters a build or commit |
-| experiment slot A/B demo environments and direct flash commands | omitted from normal targets; replaced by the one-time topology-locked installer and authenticated OTA path |
+| Experimental piece                                                                    | Production disposition                                                                                     |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| pinned rBoot/esptool2 build, big-flash linker contract, boot2 encoder, and ELF checks | integrated and hardened with CI byte/symbol/size verification                                              |
+| `BootControl`, slot writer, and temporary-boot RTC use                                | adapted behind application-facing abstractions with strict slot bounds                                     |
+| single-sector upstream rBoot config promotion                                         | replaced by redundant transactional metadata with generation, CRC, and last-written commit marker          |
+| serial experiment harness and `src/rboot_test.cpp`                                    | test-only; intentionally omitted from production firmware                                                  |
+| experiment `config.h`, private signing key, flash backups, and `.hwtest` state        | intentionally omitted; no device/installation secret enters a build or commit                              |
+| experiment slot A/B demo environments and direct flash commands                       | omitted from normal targets; replaced by the one-time topology-locked installer and authenticated OTA path |
 
 The health gate, server version acknowledgement, provisioning store, restricted-CBOR protocol, serial recovery isolation, and fault-injection builds are production integration work rather than transplanted experimental code. rBoot promotion is never inferred merely from reaching `setup()`.
 

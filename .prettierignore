@@ -1,0 +1,8 @@
+.pio/
+.venv/
+artifacts/
+hardware/board/easyeda/
+hardware/case/
+docs/keymap.svg
+keys/
+package-lock.json

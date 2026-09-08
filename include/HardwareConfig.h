@@ -1,13 +1,13 @@
 #pragma once
 #define HARDWARE_ID "mindflayer-keypad-v1"
 #define NEOPIXEL_DATA_PIN 3
-#define FIRMWARE_SIGNING_PUBLIC_KEY_PEM \
-"-----BEGIN PUBLIC KEY-----\n" \
-"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4wh2+u8aYuSQziJnnGO7\n" \
-"xPo1QfMenF9wRE+5bIDibr0g9jbmKzPCXf7iJkrthzNxtuYLPOZzw8YIHxS/PdkV\n" \
-"LGa/hoi43KrrBLNuHlkEHq1AriQCcpYYERDMsvkTNGH6aGLRaUWLY/S/XkcmWYed\n" \
-"q8zb9/RopR0lXHRHZWOYqyp1NqV11LqSHSTdWr7xhGFQgaXkGaRw9PBgY489kgNW\n" \
-"8cUqCiTDEx85G69OV9p1bMMU3QHT/Z6eWldolj+DHMMnDbioR0pVGRdJp8+8/ecZ\n" \
-"Ep0uq2sga4YvWN7l23Xk3kEUtsSy9RqNODvs1AyVp+iYiDCSNKPDs+oZodPzVcz1\n" \
-"RwIDAQAB\n" \
-"-----END PUBLIC KEY-----\n"
+#define FIRMWARE_SIGNING_PUBLIC_KEY_PEM                                                            \
+  "-----BEGIN PUBLIC KEY-----\n"                                                                   \
+  "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4wh2+u8aYuSQziJnnGO7\n"                             \
+  "xPo1QfMenF9wRE+5bIDibr0g9jbmKzPCXf7iJkrthzNxtuYLPOZzw8YIHxS/PdkV\n"                             \
+  "LGa/hoi43KrrBLNuHlkEHq1AriQCcpYYERDMsvkTNGH6aGLRaUWLY/S/XkcmWYed\n"                             \
+  "q8zb9/RopR0lXHRHZWOYqyp1NqV11LqSHSTdWr7xhGFQgaXkGaRw9PBgY489kgNW\n"                             \
+  "8cUqCiTDEx85G69OV9p1bMMU3QHT/Z6eWldolj+DHMMnDbioR0pVGRdJp8+8/ecZ\n"                             \
+  "Ep0uq2sga4YvWN7l23Xk3kEUtsSy9RqNODvs1AyVp+iYiDCSNKPDs+oZodPzVcz1\n"                             \
+  "RwIDAQAB\n"                                                                                     \
+  "-----END PUBLIC KEY-----\n"

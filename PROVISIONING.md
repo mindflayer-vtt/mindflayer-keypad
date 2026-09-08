@@ -12,20 +12,20 @@ The definite-length CBOR map uses integer keys: `0` schema version 1; `1` device
 
 The target has 4 MiB flash. The addresses are centralized and compile-time asserted in `lib/Provisioning/FlashLayout.h`:
 
-| Range | Owner |
-|---|---|
-| `0x000000..0x000FFF` | rBoot 1.4.2 |
+| Range                | Owner                         |
+| -------------------- | ----------------------------- |
+| `0x000000..0x000FFF` | rBoot 1.4.2                   |
 | `0x001000..0x001FFF` | transactional boot metadata A |
-| `0x002000..0x0FFFFF` | rBoot slot A |
+| `0x002000..0x0FFFFF` | rBoot slot A                  |
 | `0x100000..0x100FFF` | transactional boot metadata B |
-| `0x101000..0x201FFF` | reserved/free |
-| `0x202000..0x2FFFFF` | rBoot slot B |
-| `0x300000..0x3F8FFF` | reserved/free |
-| `0x3F9000..0x3F9FFF` | provisioning copy A |
-| `0x3FA000..0x3FAFFF` | provisioning copy B |
-| `0x3FB000..0x3FBFFF` | future 4 MiB Arduino EEPROM |
-| `0x3FC000..0x3FCFFF` | RF calibration |
-| `0x3FD000..0x3FFFFF` | SDK Wi-Fi parameters |
+| `0x101000..0x201FFF` | reserved/free                 |
+| `0x202000..0x2FFFFF` | rBoot slot B                  |
+| `0x300000..0x3F8FFF` | reserved/free                 |
+| `0x3F9000..0x3F9FFF` | provisioning copy A           |
+| `0x3FA000..0x3FAFFF` | provisioning copy B           |
+| `0x3FB000..0x3FBFFF` | future 4 MiB Arduino EEPROM   |
+| `0x3FC000..0x3FCFFF` | RF calibration                |
+| `0x3FD000..0x3FFFFF` | SDK Wi-Fi parameters          |
 
 Core 3.1.2 uses `ld/eagle.flash.4m-rboot.ld` for rBoot application images and `ld/eagle.flash.4m0m.ld` only for the retained pre-migration build. Both configure no filesystem. EEPROM is explicitly at `0x3FB000`, with RF calibration and SDK Wi-Fi state above it. Compile-time assertions encode bootloader, metadata, slot, provisioning, and framework-tail boundaries. Runtime provisioning flash operations still refuse every address outside the two provisioning sectors.
 

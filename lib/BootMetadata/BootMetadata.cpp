@@ -13,10 +13,11 @@ uint8_t configChecksum(const Config& config) {
   uint8_t result = kChecksumInitial;
   const uint8_t* p = reinterpret_cast<const uint8_t*>(&config);
   const uint8_t* end = reinterpret_cast<const uint8_t*>(&config.checksum);
-  while (p < end) result ^= *p++;
+  while (p < end)
+    result ^= *p++;
   return result;
 }
-}
+} // namespace
 
 uint32_t crc32(const void* data, size_t size) {
   uint32_t crc = 0xffffffff;
@@ -39,9 +40,7 @@ bool valid(const Record& record, uint32_t commit) {
          record.crc32 == crc32(&record, offsetof(Record, crc32));
 }
 
-bool newer(uint32_t left, uint32_t right) {
-  return static_cast<int32_t>(left - right) > 0;
-}
+bool newer(uint32_t left, uint32_t right) { return static_cast<int32_t>(left - right) > 0; }
 
 bool Store::read(uint32_t address, Record& record) {
   uint32_t marker;
@@ -53,11 +52,14 @@ bool Store::load(Record& record) {
   Record a, b;
   const bool aValid = read(RBootSlot::kMetadataAAddress, a);
   const bool bValid = read(RBootSlot::kMetadataBAddress, b);
-  if (!aValid && !bValid) return false;
+  if (!aValid && !bValid)
+    return false;
   if (bValid && (!aValid || newer(b.generation, a.generation))) {
-    record = b; activeAddress_ = RBootSlot::kMetadataBAddress;
+    record = b;
+    activeAddress_ = RBootSlot::kMetadataBAddress;
   } else {
-    record = a; activeAddress_ = RBootSlot::kMetadataAAddress;
+    record = a;
+    activeAddress_ = RBootSlot::kMetadataAAddress;
   }
   return true;
 }
@@ -66,7 +68,8 @@ bool Store::commit(const Config& config, Hook hook, void* context) {
   Record current;
   const bool hadCurrent = load(current);
   const uint32_t target = activeAddress_ == RBootSlot::kMetadataAAddress
-                              ? RBootSlot::kMetadataBAddress : RBootSlot::kMetadataAAddress;
+                              ? RBootSlot::kMetadataBAddress
+                              : RBootSlot::kMetadataAAddress;
   Record next{};
   next.magic = kMagic;
   next.format = kFormat;
@@ -74,26 +77,37 @@ bool Store::commit(const Config& config, Hook hook, void* context) {
   next.config = config;
   next.config.checksum = configChecksum(next.config);
   next.crc32 = crc32(&next, offsetof(Record, crc32));
-  if (!flash_.eraseSector(target / RBootSlot::kSectorSize)) return false;
-  if (hook) hook(Stage::Erased, context);
+  if (!flash_.eraseSector(target / RBootSlot::kSectorSize))
+    return false;
+  if (hook)
+    hook(Stage::Erased, context);
   const size_t padded = (sizeof(next) + 3) & ~size_t(3);
   uint8_t body[(sizeof(next) + 3) & ~size_t(3)];
-  memset(body, 0xff, sizeof(body)); memcpy(body, &next, sizeof(next));
-  if (!flash_.write(target, body, 4)) return false;
-  if (hook) hook(Stage::PartialBodyWritten, context);
-  if (!flash_.write(target + 4, body + 4, padded - 4)) return false;
-  if (hook) hook(Stage::BodyWritten, context);
+  memset(body, 0xff, sizeof(body));
+  memcpy(body, &next, sizeof(next));
+  if (!flash_.write(target, body, 4))
+    return false;
+  if (hook)
+    hook(Stage::PartialBodyWritten, context);
+  if (!flash_.write(target + 4, body + 4, padded - 4))
+    return false;
+  if (hook)
+    hook(Stage::BodyWritten, context);
   Record verify;
-  if (!flash_.read(target, &verify, sizeof(verify)) || memcmp(&verify, &next, sizeof(next))) return false;
-  if (hook) hook(Stage::BodyVerified, context);
+  if (!flash_.read(target, &verify, sizeof(verify)) || memcmp(&verify, &next, sizeof(next)))
+    return false;
+  if (hook)
+    hook(Stage::BodyVerified, context);
   const uint32_t marker = kCommit;
-  if (!flash_.write(target + kCommitOffset, &marker, sizeof(marker))) return false;
+  if (!flash_.write(target + kCommitOffset, &marker, sizeof(marker)))
+    return false;
   Record committed;
-  if (!read(target, committed) || memcmp(&committed, &next, sizeof(next))) return false;
+  if (!read(target, committed) || memcmp(&committed, &next, sizeof(next)))
+    return false;
   activeAddress_ = target;
-  if (hook) hook(Stage::Committed, context);
+  if (hook)
+    hook(Stage::Committed, context);
   return true;
 }
 
-}  // namespace BootMetadata
-
+} // namespace BootMetadata

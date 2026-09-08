@@ -17,7 +17,8 @@ constexpr uint8_t kConfigVersion = 0x01;
 constexpr uint8_t kModeStandard = 0x00;
 constexpr uint8_t kModeTemporary = 0x02;
 constexpr uint32_t kRtcMagic = 0x2334ae68;
-constexpr uint8_t kRtcAddress = 64; // RTC byte 256; asserted disjoint from recovery in RecoveryMode.h.
+constexpr uint8_t kRtcAddress =
+    64; // RTC byte 256; asserted disjoint from recovery in RecoveryMode.h.
 
 struct __attribute__((packed)) Config {
   uint8_t magic;
@@ -48,7 +49,7 @@ RtcData rtc;
 bool rtcValid = false;
 
 class EspFlash : public RBootSlot::Flash {
- public:
+public:
   bool read(uint32_t address, void* data, size_t size) override {
     return ESP.flashRead(address, static_cast<uint8_t*>(data), size);
   }
@@ -63,7 +64,8 @@ BootMetadata::Store metadata(flash);
 
 uint8_t checksum(const uint8_t* begin, const uint8_t* end) {
   uint8_t value = kChecksumInitial;
-  while (begin < end) value ^= *begin++;
+  while (begin < end)
+    value ^= *begin++;
   return value;
 }
 
@@ -77,7 +79,8 @@ bool validConfig(const Config& candidate) {
 }
 
 bool readRtc() {
-  if (!system_rtc_mem_read(kRtcAddress, &rtc, sizeof(rtc))) return false;
+  if (!system_rtc_mem_read(kRtcAddress, &rtc, sizeof(rtc)))
+    return false;
   return rtc.magic == kRtcMagic &&
          rtc.checksum == checksum(reinterpret_cast<const uint8_t*>(&rtc),
                                   reinterpret_cast<const uint8_t*>(&rtc.checksum));
@@ -90,20 +93,27 @@ bool writeRtc() {
   return system_rtc_mem_write(kRtcAddress, &rtc, sizeof(rtc));
 }
 
-}  // namespace
+} // namespace
 
 namespace BootControl {
 
 bool begin() {
   BootMetadata::Record record;
-  if (metadata.load(record)) memcpy(&config, &record.config, sizeof(config));
+  if (metadata.load(record))
+    memcpy(&config, &record.config, sizeof(config));
   else {
     memset(&config, 0, sizeof(config));
-    config.magic = kConfigMagic; config.version = kConfigVersion; config.currentRom = 0;
-    config.count = 2; config.roms[0] = BootControl::kSlotAAddress; config.roms[1] = BootControl::kSlotBAddress;
-    config.checksum = checksum(reinterpret_cast<const uint8_t*>(&config), reinterpret_cast<const uint8_t*>(&config.checksum));
+    config.magic = kConfigMagic;
+    config.version = kConfigVersion;
+    config.currentRom = 0;
+    config.count = 2;
+    config.roms[0] = BootControl::kSlotAAddress;
+    config.roms[1] = BootControl::kSlotBAddress;
+    config.checksum = checksum(reinterpret_cast<const uint8_t*>(&config),
+                               reinterpret_cast<const uint8_t*>(&config.checksum));
   }
-  if (!validConfig(config)) return false;
+  if (!validConfig(config))
+    return false;
   rtcValid = readRtc();
   return rtcValid;
 }
@@ -114,7 +124,8 @@ uint8_t permanentSlot() { return config.currentRom; }
 bool isTemporaryBoot() { return rtcValid && (rtc.lastMode & kModeTemporary); }
 
 bool bootTemporary(uint8_t slot) {
-  if (slot >= config.count || slot == currentSlot()) return false;
+  if (slot >= config.count || slot == currentSlot())
+    return false;
   if (!rtcValid) {
     memset(&rtc, 0, sizeof(rtc));
     rtc.lastMode = kModeStandard;
@@ -126,9 +137,11 @@ bool bootTemporary(uint8_t slot) {
 }
 
 bool promoteCurrentSlot() {
-  if (!rtcValid || !isTemporaryBoot() || currentSlot() >= config.count) return false;
+  if (!rtcValid || !isTemporaryBoot() || currentSlot() >= config.count)
+    return false;
   config.currentRom = currentSlot();
-  if (!metadata.commit(*reinterpret_cast<BootMetadata::Config*>(&config))) return false;
+  if (!metadata.commit(*reinterpret_cast<BootMetadata::Config*>(&config)))
+    return false;
   rtc.nextMode = kModeStandard;
   return writeRtc();
 }
@@ -136,15 +149,17 @@ bool promoteCurrentSlot() {
 #ifdef RBOOT_FAULT_INJECTION
 namespace {
 void resetAtStage(BootMetadata::Stage stage, void* context) {
-  if (static_cast<uint8_t>(stage) == *static_cast<uint8_t*>(context)) ESP.restart();
+  if (static_cast<uint8_t>(stage) == *static_cast<uint8_t*>(context))
+    ESP.restart();
 }
-}
+} // namespace
 
 bool promoteCurrentSlotWithReset(uint8_t stage) {
-  if (!rtcValid || !isTemporaryBoot() || currentSlot() >= config.count) return false;
+  if (!rtcValid || !isTemporaryBoot() || currentSlot() >= config.count)
+    return false;
   config.currentRom = currentSlot();
   return metadata.commit(*reinterpret_cast<BootMetadata::Config*>(&config), resetAtStage, &stage);
 }
 #endif
 
-}  // namespace BootControl
+} // namespace BootControl

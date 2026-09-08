@@ -1,6 +1,7 @@
 #pragma once
 
-namespace mindflayer { namespace health {
+namespace mindflayer {
+namespace health {
 
 struct State {
   bool temporary;
@@ -18,4 +19,5 @@ struct State {
 bool shouldPromote(const State& state);
 bool shouldArmSerialRecovery(bool temporaryBoot, bool permanentBoot);
 
-} }
+} // namespace health
+} // namespace mindflayer

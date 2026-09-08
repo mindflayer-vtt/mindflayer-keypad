@@ -4,13 +4,24 @@
   "private": true,
   "description": "Release tooling for Mind Flayer keypad firmware",
   "license": "MIT",
-  "engines": { "node": ">=24.0.0" },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "format": "npm run format:cpp && npm run format:docs",
+    "format:check": "npm run format:cpp:check && npm run format:docs:check",
+    "format:cpp": "clang-format -i src/*.cpp include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
+    "format:cpp:check": "clang-format --dry-run --Werror src/*.cpp include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
+    "format:docs": "prettier --write '**/*.{md,json,yml,yaml}'",
+    "format:docs:check": "prettier --check '**/*.{md,json,yml,yaml}'"
+  },
   "devDependencies": {
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.1.1",
     "conventional-changelog-conventionalcommits": "^10.4.0",
+    "prettier": "3.6.2",
     "semantic-release": "^25.0.9"
   }
 }

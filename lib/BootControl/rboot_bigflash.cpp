@@ -19,8 +19,8 @@ uint8_t rBoot_mmap_2 = 0xff;
 void IRAM_ATTR Cache_Read_Enable_New(void) {
   if (rBoot_mmap_1 == 0xff) {
     const size_t offset = offsetof(RbootRtcData, lastRom);
-    volatile uint32_t* word = reinterpret_cast<volatile uint32_t*>(
-        0x60001100 + (64 * 4) + (offset & ~3));
+    volatile uint32_t* word =
+        reinterpret_cast<volatile uint32_t*>(0x60001100 + (64 * 4) + (offset & ~3));
     uint32_t value = *word;
     const uint8_t rom = reinterpret_cast<uint8_t*>(&value)[offset & 3];
     value = (rom == 0 ? 0x002000 : 0x202000) / 0x100000;
@@ -30,5 +30,4 @@ void IRAM_ATTR Cache_Read_Enable_New(void) {
   Cache_Read_Enable(rBoot_mmap_1, rBoot_mmap_2, 1);
 }
 
-}  // extern "C"
-
+} // extern "C"

@@ -45,3 +45,4 @@ include/config.h
 /keys/
 /artifacts/
 /.hwtest/
+/node_modules/

@@ -32,17 +32,16 @@ bool valid(const Record& record, uint32_t commit);
 bool newer(uint32_t left, uint32_t right);
 
 class Store {
- public:
+public:
   explicit Store(RBootSlot::Flash& flash) : flash_(flash), activeAddress_(0) {}
   bool load(Record& record);
   bool commit(const Config& config, Hook hook = nullptr, void* context = nullptr);
   uint32_t activeAddress() const { return activeAddress_; }
 
- private:
+private:
   bool read(uint32_t address, Record& record);
   RBootSlot::Flash& flash_;
   uint32_t activeAddress_;
 };
 
-}  // namespace BootMetadata
-
+} // namespace BootMetadata

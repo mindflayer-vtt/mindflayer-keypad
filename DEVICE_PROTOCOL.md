@@ -4,16 +4,16 @@ The direct keypad endpoint is `WSS /device/v1`. It accepts binary WebSocket fram
 
 Except for the bootstrap challenge described below, every frame begins with the unsigned message type followed by the explicit protocol version `2`. Integer encodings are enums or bounded values, binary security values are byte strings, and text is used only for textual identifiers. Exact arity, order, type, range, length, shortest-form encoding, complete consumption, and authorization state are mandatory. A connection must not change versions after its authentication response.
 
-| Type | Name | Exact array schema |
-|---:|---|---|
-| 0 | auth challenge | `[0, 1, challenge:bstr .size 32]` (bootstrap format) |
-| 1 | auth response | `[1, 2, deviceId:tstr .size (1..64), hmac:bstr .size 32]` |
-| 2 | auth result | `[2, 2, status:uint 0..1, deviceId:tstr .size (0..64)]`; status 0 requires the authenticated ID |
-| 3 | registration | `[3, 2, firmware:tstr .size (1..47), hardware:tstr .size (1..64)]`; controller ID is the authenticated session ID |
-| 4 | key event | `[4, 2, key:uint 0..10, action:uint 0..1]` |
-| 5 | LED configuration | `[5, 2, r1:uint8, g1:uint8, b1:uint8, r2:uint8, g2:uint8, b2:uint8]` |
-| 6 | update available | `[6, 2, version:tstr .size (1..47), size:uint32 .gt 0, sha256:bstr .size 32, path:tstr .size (1..191), token:bstr .size 32]` |
-| 7 | firmware accepted | `[7, 2, version:tstr .size (1..47)]` |
+| Type | Name              | Exact array schema                                                                                                           |
+| ---: | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+|    0 | auth challenge    | `[0, 1, challenge:bstr .size 32]` (bootstrap format)                                                                         |
+|    1 | auth response     | `[1, 2, deviceId:tstr .size (1..64), hmac:bstr .size 32]`                                                                    |
+|    2 | auth result       | `[2, 2, status:uint 0..1, deviceId:tstr .size (0..64)]`; status 0 requires the authenticated ID                              |
+|    3 | registration      | `[3, 2, firmware:tstr .size (1..47), hardware:tstr .size (1..64)]`; controller ID is the authenticated session ID            |
+|    4 | key event         | `[4, 2, key:uint 0..10, action:uint 0..1]`                                                                                   |
+|    5 | LED configuration | `[5, 2, r1:uint8, g1:uint8, b1:uint8, r2:uint8, g2:uint8, b2:uint8]`                                                         |
+|    6 | update available  | `[6, 2, version:tstr .size (1..47), size:uint32 .gt 0, sha256:bstr .size 32, path:tstr .size (1..191), token:bstr .size 32]` |
+|    7 | firmware accepted | `[7, 2, version:tstr .size (1..47)]`                                                                                         |
 
 Auth status is `0=OK`, `1=FAILED`. Action is `0=UP`, `1=DOWN`. Key codes are `0=Q, 1=W, 2=E, 3=A, 4=S, 5=D, 6=Z, 7=X, 8=C, 9=SHI, 10=SPC`.
 
@@ -44,15 +44,15 @@ The HMAC input remains independent of CBOR: three unsigned-32-bit-big-endian-len
 
 These measured payload sizes compare the prior compact JSON representation with the v1 CBOR fixtures; WebSocket framing is excluded. The restricted format is chosen for bounded parsing rather than compression, but it is also smaller in every case.
 
-| Message | JSON bytes | CBOR bytes |
-|---|---:|---:|
-| challenge | 116 | 37 |
-| auth response | 124 | 50 |
-| registration | 144 | 31 |
-| key down | 75 | 5 |
-| key up | 73 | 5 |
-| LED configuration | 78 | 9 |
-| update available | 212 | 97 |
+| Message           | JSON bytes | CBOR bytes |
+| ----------------- | ---------: | ---------: |
+| challenge         |        116 |         37 |
+| auth response     |        124 |         50 |
+| registration      |        144 |         31 |
+| key down          |         75 |          5 |
+| key up            |         73 |          5 |
+| LED configuration |         78 |          9 |
+| update available  |        212 |         97 |
 
 ## Resource measurements
 
