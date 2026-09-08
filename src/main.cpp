@@ -15,6 +15,7 @@
 #ifdef RBOOT_INTEGRATION
 #include <BootControl.h>
 #include <RBootSlot.h>
+#include <RBootTestHooks.h>
 #endif
 
 #ifndef FIRMWARE_VERSION
@@ -208,22 +209,10 @@ static void performUpdate(const protocol::UpdateAvailable& update) {
     http.end();
     return;
   }
-#ifdef TEST_CORRUPT_CANDIDATE_AFTER_VALIDATION
-  // boot2 bytes 0x10 onward are the checksummed IROM payload. Clear one bit
-  // without an erase, after application validation but before temporary boot.
-  const uint32_t address = RBootSlot::slotStart(target) + 0x20;
-  uint32_t word;
-  const bool readable = RBootSlot::validAbsoluteRange(target, address, sizeof(word)) &&
-                        slotFlash.read(address, &word, sizeof(word));
-  const bool corrupted =
-      readable && word && ((word &= word - 1), slotFlash.write(address, &word, sizeof(word)));
-  if (!corrupted) {
-    Serial.println("TEST: unable to corrupt validated inactive image safely");
+  if (!RBootTestHooks::corruptCandidateAfterValidation(slotFlash, target)) {
     http.end();
     return;
   }
-  Serial.println("TEST: corrupted validated inactive image before temporary boot");
-#endif
   Serial.printf("Validated candidate in slot %c; requesting temporary boot\n",
                 target == RBootSlot::Slot::A ? 'A' : 'B');
   http.end();
@@ -275,13 +264,13 @@ static void processMessage(const uint8_t* data, size_t size) {
       return;
     }
     authenticated = true;
-#if defined(RBOOT_INTEGRATION) && defined(TEST_FAIL_BEFORE_SERVER_ACK)
-    if (temporaryBoot)
-      Serial.println("TEST: withholding candidate registration before forced failure");
-    else
+    bool withholdRegistration = false;
+#ifdef RBOOT_INTEGRATION
+    withholdRegistration = RBootTestHooks::withholdCandidateRegistration(temporaryBoot);
 #endif
-        if (protocol::buildRegistration(frameBuffer, sizeof(frameBuffer), written, FIRMWARE_VERSION,
-                                        HARDWARE_ID)) {
+    if (!withholdRegistration &&
+        protocol::buildRegistration(frameBuffer, sizeof(frameBuffer), written, FIRMWARE_VERSION,
+                                    HARDWARE_ID)) {
       sendFrame(written);
       registered = true;
     }
@@ -315,16 +304,12 @@ static void processMessage(const uint8_t* data, size_t size) {
                                               !strcmp(accepted.version, FIRMWARE_VERSION)};
     if (mindflayer::health::shouldPromote(health)) {
       Serial.println("Server accepted candidate; promoting transactionally");
-#if defined(RBOOT_FAULT_INJECTION) && defined(RBOOT_PROMOTION_RESET_STAGE)
-      if (!BootControl::promoteCurrentSlotWithReset(RBOOT_PROMOTION_RESET_STAGE))
-        Serial.println("Candidate promotion fault test failed to start");
-#else
-      if (BootControl::promoteCurrentSlot()) {
+      if (BootControl::promoteCurrentSlot(RBootTestHooks::promotionHook(),
+                                          RBootTestHooks::promotionContext())) {
         Serial.flush();
         ESP.restart();
       } else
         Serial.println("Candidate promotion failed");
-#endif
     }
 #endif
     return;
@@ -529,13 +514,7 @@ void loop() {
     Serial.flush();
     ESP.restart();
   }
-#ifdef TEST_FAIL_BEFORE_SERVER_ACK
-  if (temporaryBoot && millis() - temporaryStarted > 3000) {
-    Serial.println("TEST: failing temporary candidate before server acknowledgement");
-    Serial.flush();
-    ESP.restart();
-  }
-#endif
+  RBootTestHooks::maybeFailBeforeServerAcknowledgement(temporaryBoot, millis() - temporaryStarted);
 #endif
   if (reconnectRequested) {
     reconnectRequested = false;

@@ -34,6 +34,14 @@ jobs:
             --image .pio/build/controller_1_rboot/rboot-app.bin \
             --esptool2 .pio/rboot-upstream/esptool2/esptool2
           test "$(wc -c < .pio/rboot-artifacts/rboot.bin)" -le 4096
+          if strings .pio/build/controller_1_rboot/firmware.elf | grep -q 'TEST:'; then
+            echo 'Fault-injection code found in production firmware' >&2
+            exit 1
+          fi
+      - name: Compile rBoot fault-injection variants
+        run: |
+          PLATFORMIO_BUILD_FLAGS='-DRBOOT_PROMOTION_RESET_STAGE=2' pio run -e controller_1_rboot_fault
+          pio run -e controller_1_rboot_unhealthy -e controller_1_rboot_corrupt
       - name: Prove firmware is independent of provisioning inputs
         run: |
           scripts/verify-signing-key.py

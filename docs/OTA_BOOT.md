@@ -71,6 +71,12 @@ rBoot RTC data occupies bytes 256..267 (word 64). Serial-recovery state occupies
 
 CI covers native/sanitizer state machines, layout, boot2 equivalence, strong-symbol ownership, IROM VMA, and bootloader size. Toolchain/Core/rBoot upgrades still require hardware checks for A-to-B promotion, unhealthy rollback, tamper rejection, inactive-IROM rejection, representative metadata interruption, provisioning hashes, and permanent/temporary/promoted recovery behavior.
 
+Fault behavior is isolated in `lib/RBootTestHooks`. Normal application and boot-control code expose only
+neutral hook points; corruption, forced pre-acknowledgement failure, test logging, and transaction-stage
+reset callbacks do not live in the production control flow. Each injection macro requires
+`MINDFLAYER_FAULT_INJECTION_BUILD`, which is supplied only by the dedicated PlatformIO fault environments.
+CI compiles every fault variant and rejects a production ELF containing the fault logger's `TEST:` marker.
+
 ## Integrated resource measurements
 
 The final local Core 3.1.2/GCC 10.3.0 production rBoot build uses 40,920/81,920 bytes static RAM and 435,883 bytes of linked flash. Its boot2 image is 435,968/1,040,384 bytes (41.90%), leaving 604,416 bytes (590.25 KiB) in either slot. The retained normal build uses 39,384 bytes RAM and 446,239 linked flash bytes. rBoot is 2,688/4,096 bytes; each transactional metadata copy uses one 4 KiB sector, with its commit marker in the final four bytes.

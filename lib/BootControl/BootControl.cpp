@@ -136,30 +136,14 @@ bool bootTemporary(uint8_t slot) {
   return writeRtc();
 }
 
-bool promoteCurrentSlot() {
+bool promoteCurrentSlot(BootMetadata::Hook hook, void* context) {
   if (!rtcValid || !isTemporaryBoot() || currentSlot() >= config.count)
     return false;
   config.currentRom = currentSlot();
-  if (!metadata.commit(*reinterpret_cast<BootMetadata::Config*>(&config)))
+  if (!metadata.commit(*reinterpret_cast<BootMetadata::Config*>(&config), hook, context))
     return false;
   rtc.nextMode = kModeStandard;
   return writeRtc();
 }
-
-#ifdef RBOOT_FAULT_INJECTION
-namespace {
-void resetAtStage(BootMetadata::Stage stage, void* context) {
-  if (static_cast<uint8_t>(stage) == *static_cast<uint8_t*>(context))
-    ESP.restart();
-}
-} // namespace
-
-bool promoteCurrentSlotWithReset(uint8_t stage) {
-  if (!rtcValid || !isTemporaryBoot() || currentSlot() >= config.count)
-    return false;
-  config.currentRom = currentSlot();
-  return metadata.commit(*reinterpret_cast<BootMetadata::Config*>(&config), resetAtStage, &stage);
-}
-#endif
 
 } // namespace BootControl

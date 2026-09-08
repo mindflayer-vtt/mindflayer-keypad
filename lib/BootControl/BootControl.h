@@ -1,5 +1,6 @@
 #pragma once
 
+#include <BootMetadata.h>
 #include <RBootSlot.h>
 #include <stdint.h>
 
@@ -15,9 +16,6 @@ uint8_t currentSlot();
 uint8_t permanentSlot();
 bool isTemporaryBoot();
 bool bootTemporary(uint8_t slot);
-bool promoteCurrentSlot();
-#ifdef RBOOT_FAULT_INJECTION
-bool promoteCurrentSlotWithReset(uint8_t stage);
-#endif
+bool promoteCurrentSlot(BootMetadata::Hook hook = nullptr, void* context = nullptr);
 
 } // namespace BootControl
