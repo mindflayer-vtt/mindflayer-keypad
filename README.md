@@ -8,6 +8,8 @@ Firmware for an ESP8266 based keypad that can be used with the Mind Flayer VTT m
 
 The firmware source is organized by runtime domain; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+Native and transport regression-test commands are documented in [docs/TESTING.md](docs/TESTING.md).
+
 <div align="center">
 <img width="460" src="https://raw.githubusercontent.com/mindflayer-vtt/mindflayer-keypad/main/.github/keypad.png">
 </div>
@@ -26,6 +28,7 @@ You have to have set up the following software in order to compile an flash the 
 
 - Python 3
 - PlatformIO 6.1.19
+- Git, Make, and a host C compiler for building esptool2; OpenSSL for release signing
 
 ## Setup
 
@@ -52,7 +55,7 @@ Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses 
 
 The production OTA layout requires a one-time serial installation of rBoot, two transactional metadata sectors, and the application in slot A. Connect any supported 4 MiB ESP8266 board over USB serial and identify its port (prefer a stable `/dev/serial/by-id/...` or `/dev/serial/by-path/...` name). The installer accepts any port and MAC address, but asks esptool to identify the target and stops unless it is an ESP8266.
 
-Build the pinned bootloader and initial application, then generate the two metadata sectors:
+Build the pinned bootloader and initial application, then generate the two metadata sectors. The bootloader script installs the ESP8266 packages, including the Xtensa compiler, before building:
 
 ```sh
 ./scripts/build-rboot.sh
@@ -93,7 +96,7 @@ For a disposable local signing key and a framework-compatible signed artifact pl
 ./scripts/sign-firmware.sh .pio/build/keypad_rboot/rboot-app.bin keys/signing-private.pem mindflayer-keypad-v1 1.2.3 artifacts
 ```
 
-`include/HardwareConfig.h` is the global firmware-signing trust domain. Its public key must match the private key used by the signing command; generating a replacement keypair requires deliberately updating that global public key and rebuilding all generic firmware. Provisioning never changes this key.
+`keys/firmware-signing-public.pem` is the authoritative release public key. Its compiled copy in `include/HardwareConfig.h` must match; `scripts/verify-signing-key.py` checks this and release preparation runs the check automatically. Generating a replacement keypair requires deliberately updating that global public key and rebuilding all generic firmware. Provisioning never changes this key.
 
 The private key and artifacts are ignored. Generate the production RSA signing key separately, protect and back it up offline or in a dedicated CI secret, and never copy it into the server container. Only its public key belongs in firmware. The code installs the ESP8266 core `SigningVerifier`, so modified or unsigned OTA artifacts are rejected.
 

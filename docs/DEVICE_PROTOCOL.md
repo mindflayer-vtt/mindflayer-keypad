@@ -2,6 +2,10 @@
 
 The direct keypad endpoint is `WSS /device/v1`. It accepts binary WebSocket frames only; Foundry continues to use JSON text frames on `/ws`. Every device frame is one definite-length RFC 8949 CBOR array and is rejected before QCBOR when its size is zero or exceeds 512 bytes.
 
+The pinned WebSocket transport enforces 512 bytes before allocating or reading a data frame's payload, including the accumulated length of a fragmented message. Interleaved control frames do not reset that budget. Oversized frames close the connection; incomplete header/payload reads time out after one second per exact read. Short TCP reads are assembled before interpreting a header or payload.
+
+Separate WebSocket messages may arrive together in TCP/TLS buffers. The transport consumes at most one frame per poll, allowing application dispatch before the next buffered frame. This does not introduce a CBOR batch format: each completed WebSocket message still contains exactly one protocol array. The project patch runs after PlatformIO installs dependencies but before compilation starts; source hashes guard the pinned upstream code against unexpected changes.
+
 Except for the bootstrap challenge described below, every frame begins with the unsigned message type followed by the explicit protocol version `2`. Integer encodings are enums or bounded values, binary security values are byte strings, and text is used only for textual identifiers. Exact arity, order, type, range, length, shortest-form encoding, complete consumption, and authorization state are mandatory. A connection must not change versions after its authentication response.
 
 | Type | Name              | Exact array schema                                                                                                           |

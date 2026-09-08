@@ -1,15 +1,49 @@
 # Public release audit — 2026-09-08
 
-The audit is complete; this revision is **not ready for public release**. Five
-high-priority defects remain, and a historical credential needs a retirement
-decision. This report records findings, not implemented fixes.
+The original audit found five high-priority defects and a historical credential
+requiring a retirement decision. The follow-up below records implemented fixes;
+the original findings remain as evidence about the audited revision. Hardware
+and deployment validation still determine public release readiness.
 
 Audited firmware revision: `806bba4`. The latest commit was amended during the
 audit; the relevant source and signing-key findings were rechecked afterward.
 The sibling server was inspected for the provisioning, protocol, and firmware
 repository contracts; this was not a complete independent server audit.
 
-## High-priority findings
+## Follow-up fixes — 2026-09-08
+
+- R1: the compiled trust anchor and signer now use the production public key in
+  `keys/firmware-signing-public.pem`; the duplicate under `scripts/` was removed.
+  Release preparation runs the key-consistency verifier. The owner reports that
+  the matching private key is installed in GitHub; its secret value was not read.
+- R2: the bootloader script installs the pinned PlatformIO environment packages
+  before invoking the compiler. A run with an empty `PLATFORMIO_CORE_DIR`
+  installed the toolchain and produced the expected 2,688-byte bootloader.
+- R3: an SDK timer now covers startup and yielding network stalls independently
+  of application-loop progress. Six scenarios run the actual application source
+  with simulated SDK time, and permanent boots remain exempt.
+- R4 and R5: the transport now processes one frame per poll, rejects oversized
+  frames before payload allocation, tracks aggregate fragment size, and uses
+  bounded exact reads. Nine transport scenarios test the actual pinned library
+  source. Regression failures were observed before implementing the fixes.
+- The approved `npm audit` completed successfully with **zero reported
+  vulnerabilities** across 460 dependency entries. The earlier denied attempt
+  documented below describes the original audit, not the current scan status.
+- Host application/transport regressions and installer tests now run in CI.
+  C++ formatting includes their sources and uses portable shell globs.
+
+Follow-up verification passed all 60 existing native/sanitizer cases, six startup
+scenarios, nine transport scenarios, and both installer tests. Both production
+environments and all three fault variants compiled successfully; the rBoot image
+matched pinned esptool2, the signing-key verifier passed, and formatting checks
+passed. These are local results, not a claim that a GitHub release has run.
+
+See [TESTING.md](TESTING.md) for commands and coverage. No signing-key rotation,
+history rewrite, hardware flashing, or GitHub release publication was performed.
+The historical-credential decision, installer safeguards, and remaining hardware
+and production-release checks below still require attention.
+
+## Original high-priority findings
 
 ### R1: The production public key is not the firmware trust anchor
 
@@ -163,7 +197,7 @@ not a substitute for a comprehensive secret scanner.
   runs can therefore bundle stale, unreferenced files. Stage each release in a
   fresh directory before archiving.
 
-## Verification performed
+## Original verification performed
 
 | Check                             | Evidence/result                                                                                                                                                                                                      |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -188,7 +222,7 @@ The configured v7 GitHub Actions exist: checked against the official releases fo
 [setup-node](https://github.com/actions/setup-node/releases). Their major versions
 are not the cause of R2.
 
-## Limits and release exit criteria
+## Original limits and release exit criteria
 
 No device was opened, reset, provisioned, or flashed. Earlier hardware results in
 `docs/OTA_BOOT.md` describe older test artifacts; they do not prove the current
