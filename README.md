@@ -99,7 +99,7 @@ The private key and artifacts are ignored. Generate the production RSA signing k
 
 ## Public firmware releases
 
-CI validates every push and pull request. On `main`, semantic-release analyzes Conventional Commits, chooses the next semantic version, and—only when a release is due—builds the rBoot application with that version, signs it, verifies the signature against the public key compiled into the keypad, creates the `vX.Y.Z` tag and GitHub release, and publishes `mindflayer-keypad-X.Y.Z-server-firmware.tar.gz`. Configure the GitHub Actions secret `FIRMWARE_SIGNING_PRIVATE_KEY` with the PEM-encoded production RSA private key before merging a releasable commit. A missing or mismatched key fails before a release is published.
+CI validates every push and pull request. On `main`, semantic-release analyzes Conventional Commits, chooses the next semantic version, and—only when a release is due—builds the rBoot application with that version, signs it, verifies the signature against the public key compiled into the keypad, creates the `vX.Y.Z` tag and GitHub release, and publishes `mindflayer-keypad-X.Y.Z-server-firmware.tar.gz`. Configure the GitHub Actions secret `FIRMWARE_SIGNING_PRIVATE_KEY` with the PEM-encoded production RSA private key before merging a releasable commit. A missing or mismatched key fails before a release is published. See [docs/repository-setup.md](docs/repository-setup.md) for key generation, verification, upload, storage, and rotation precautions.
 
 Extract the release archive into the server's read-only firmware directory. It contains the complete repository layout expected by `mindflayer-server`:
 
