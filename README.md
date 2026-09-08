@@ -42,9 +42,9 @@ You have to have set up the following software in order to compile an flash the 
 
 ## Generic firmware and provisioning
 
-The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [PROVISIONING.md](PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.
+The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [docs/PROVISIONING.md](docs/PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.
 
-Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses the ESP8266 DMA backend on that physical pin, so UART RX is intentionally available only in the special unprovisioned/double-reset recovery mode documented in [PROVISIONING.md](PROVISIONING.md). The host provisioning tool enters that mode automatically through two FTDI RTS reset pulses.
+Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses the ESP8266 DMA backend on that physical pin, so UART RX is intentionally available only in the special unprovisioned/double-reset recovery mode documented in [docs/PROVISIONING.md](docs/PROVISIONING.md). The host provisioning tool enters that mode automatically through two FTDI RTS reset pulses.
 
 ## Flashing
 
@@ -58,7 +58,7 @@ Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses 
 
 The keypad validates the provisioned direct-server key through BearSSL `setKnownKey`; it never disables TLS validation, depends on public CA roots, pins a certificate fingerprint, or needs a device clock for server authentication. The global firmware-signing public key remains compiled into every generic artifact; its private key remains outside Git, the server, and the keypad.
 
-Override `FIRMWARE_VERSION` at build time to produce rollout versions without editing source. After pinned WSS connects to `/device/v1`, the keypad exchanges only restricted binary CBOR, completes HMAC-SHA256 authentication, and registers its hardware ID and version. See [DEVICE_PROTOCOL.md](DEVICE_PROTOCOL.md).
+Override `FIRMWARE_VERSION` at build time to produce rollout versions without editing source. After pinned WSS connects to `/device/v1`, the keypad exchanges only restricted binary CBOR, completes HMAC-SHA256 authentication, and registers its hardware ID and version. See [docs/DEVICE_PROTOCOL.md](docs/DEVICE_PROTOCOL.md).
 
 For a disposable local signing key and a framework-compatible signed artifact plus server manifest:
 
@@ -87,6 +87,6 @@ mindflayer-keypad-v1/1.2.3/firmware.bin.signed
 
 The manifest's hardware ID, semantic-release version, relative path, size, and SHA-256 match the server's firmware repository contract. The server can then target provisioned keypads at that version; it does not need and must never receive the signing key.
 
-The rBoot production path downloads this signed boot2 image into the inactive slot, validates transport hash, RSA signature, structure, and full IROM/RAM checksum, then boots it once. Promotion requires explicit server acceptance after the complete application health gate. See [OTA_BOOT.md](OTA_BOOT.md). The additive `controller_1` environment remains available as the pre-migration eboot build; it is not an rBoot OTA artifact.
+The rBoot production path downloads this signed boot2 image into the inactive slot, validates transport hash, RSA signature, structure, and full IROM/RAM checksum, then boots it once. Promotion requires explicit server acceptance after the complete application health gate. See [docs/OTA_BOOT.md](docs/OTA_BOOT.md). The additive `controller_1` environment remains available as the pre-migration eboot build; it is not an rBoot OTA artifact.
 
 For isolated hardware tests, `scripts/hwtest-network-up.sh` creates a namespaced WPA2 2.4 GHz NetworkManager AP and stores credentials only under ignored `.hwtest/`. `scripts/hwtest-network-down.sh` removes only that generated profile. Always tear it down and confirm the original default route remains.
