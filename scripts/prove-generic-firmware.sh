@@ -7,7 +7,7 @@ trap 'rm -rf "$tmp"' EXIT
 cd "$repo_dir"
 rg -n '#define (WIFI_SSID|WIFI_PASS|DEVICE_SECRET_HEX|SERVER_PUBLIC_KEY_PEM|ESP_NAME)|-D(ESP_NAME|WIFI_|DEVICE_SECRET|SERVER_PUBLIC)|#include "config.h"' src lib include platformio.ini && { echo 'Installation-specific build input found' >&2; exit 1; } || true
 rg -q '#define NEOPIXEL_DATA_PIN 3' include/HardwareConfig.h
-rg -q 'NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod>' src/main.cpp
+rg -q 'NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod>' src/LedController.cpp
 if rg -n 'NeoEsp8266BitBang|NEOPIXEL_DATA_PIN 2' src lib include README.md docs/PROVISIONING.md docs/DEVICE_PROTOCOL.md; then
   echo 'Production NeoPixel configuration no longer matches physical GPIO3 DMA hardware' >&2
   exit 1

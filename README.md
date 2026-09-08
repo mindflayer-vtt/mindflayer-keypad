@@ -6,6 +6,8 @@
 
 Firmware for an ESP8266 based keypad that can be used with the Mind Flayer VTT module &amp; server
 
+The firmware source is organized by runtime domain; see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 <div align="center">
 <img width="460" src="https://raw.githubusercontent.com/mindflayer-vtt/mindflayer-keypad/main/.github/keypad.png">
 </div>

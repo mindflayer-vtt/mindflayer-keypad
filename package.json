@@ -3,15 +3,15 @@
   "version": "0.0.0-development",
   "private": true,
   "description": "Release tooling for Mind Flayer keypad firmware",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
     "format": "npm run format:cpp && npm run format:docs",
     "format:check": "npm run format:cpp:check && npm run format:docs:check",
-    "format:cpp": "clang-format -i src/*.cpp include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
-    "format:cpp:check": "clang-format --dry-run --Werror src/*.cpp include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
+    "format:cpp": "clang-format -i src/*.{cpp,h} include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
+    "format:cpp:check": "clang-format --dry-run --Werror src/*.{cpp,h} include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
     "format:docs": "prettier --write '**/*.{md,json,yml,yaml}'",
     "format:docs:check": "prettier --check '**/*.{md,json,yml,yaml}'"
   },
