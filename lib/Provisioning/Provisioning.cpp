@@ -19,7 +19,8 @@ enum Field : uint8_t {
   WIFI_PASSWORD = 4,
   SERVER_HOST = 5,
   SERVER_PORT = 6,
-  SERVER_PUBLIC_KEY = 7
+  SERVER_PUBLIC_KEY = 7,
+  SERIAL_DEBUG = 8
 };
 uint32_t crc32(const uint8_t* data, size_t size) {
   uint32_t crc = 0xffffffff;
@@ -120,11 +121,12 @@ bool decodePayload(const uint8_t* payload, size_t size, Provisioning& output) {
   QCBORDecode_Init(&decoder, {payload, size}, QCBOR_DECODE_MODE_NORMAL);
   QCBORItem map;
   if (QCBORDecode_GetNext(&decoder, &map) != QCBOR_SUCCESS || map.uDataType != QCBOR_TYPE_MAP ||
-      map.val.uCount < 8 || map.val.uCount > 16)
+      (map.val.uCount != 8 && map.val.uCount != 9))
     return false;
   static Provisioning candidate;
   memset(&candidate, 0, sizeof(candidate));
   uint16_t seen = 0;
+  uint8_t schemaVersion = 0;
   for (uint16_t i = 0; i < map.val.uCount; i++) {
     QCBORItem item;
     if (QCBORDecode_GetNext(&decoder, &item) != QCBOR_SUCCESS ||
@@ -136,8 +138,10 @@ bool decodePayload(const uint8_t* payload, size_t size, Provisioning& output) {
     seen |= 1u << key;
     switch (key) {
     case VERSION:
-      if (item.uDataType != QCBOR_TYPE_INT64 || item.val.int64 != SCHEMA_VERSION)
+      if (item.uDataType != QCBOR_TYPE_INT64 || item.val.int64 < 1 ||
+          item.val.int64 > SCHEMA_VERSION)
         return false;
+      schemaVersion = item.val.int64;
       break;
     case DEVICE_ID:
       if (!copyText(item, candidate.deviceId, MAX_DEVICE_ID))
@@ -172,11 +176,17 @@ bool decodePayload(const uint8_t* payload, size_t size, Provisioning& output) {
       candidate.serverPublicKeyLength = item.val.string.len;
       memcpy(candidate.serverPublicKey, item.val.string.ptr, item.val.string.len);
       break;
+    case SERIAL_DEBUG:
+      if (item.uDataType != QCBOR_TYPE_FALSE && item.uDataType != QCBOR_TYPE_TRUE)
+        return false;
+      candidate.serialDebug = item.uDataType == QCBOR_TYPE_TRUE;
+      break;
     default:
       return false;
     }
   }
-  if ((seen & 0xff) != 0xff || QCBORDecode_Finish(&decoder) != QCBOR_SUCCESS)
+  const uint16_t expectedFields = schemaVersion == 1 ? 0xff : 0x1ff;
+  if (seen != expectedFields || QCBORDecode_Finish(&decoder) != QCBOR_SUCCESS)
     return false;
   output = candidate;
   return true;
@@ -214,6 +224,7 @@ bool encodeEnvelope(const Provisioning& p, uint8_t* output, size_t capacity, siz
   addText(e, SERVER_HOST, p.serverHost);
   QCBOREncode_AddUInt64ToMapN(&e, SERVER_PORT, p.serverPort);
   QCBOREncode_AddBytesToMapN(&e, SERVER_PUBLIC_KEY, {p.serverPublicKey, p.serverPublicKeyLength});
+  QCBOREncode_AddBoolToMapN(&e, SERIAL_DEBUG, p.serialDebug);
   QCBOREncode_CloseMap(&e);
   UsefulBufC encoded;
   Provisioning validation;

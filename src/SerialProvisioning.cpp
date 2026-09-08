@@ -1,5 +1,7 @@
 #include "SerialProvisioning.h"
 
+#include "DebugLog.h"
+
 #include <Arduino.h>
 #include <HealthGate.h>
 #include <Provisioning.h>
@@ -51,7 +53,7 @@ bool enterRecoveryModeIfRequested(bool temporaryBoot) {
     clearRecoveryMarker();
   else {
     armRecoveryMarker();
-    Serial.println("Double-reset recovery window open");
+    DebugLog::println("Double-reset recovery window open");
     delay(mindflayer::recovery::WINDOW_MS);
     clearRecoveryMarker();
   }

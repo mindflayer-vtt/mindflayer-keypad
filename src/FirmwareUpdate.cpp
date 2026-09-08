@@ -2,6 +2,7 @@
 
 #include "ApplicationState.h"
 #include "BuildConfig.h"
+#include "DebugLog.h"
 
 #include <Arduino.h>
 #include <ESP8266HTTPClient.h>
@@ -62,15 +63,15 @@ void installSignatureVerifier() { Update.installSignature(&firmwareHash, &firmwa
 
 void perform(const mindflayer::protocol::UpdateAvailable& update) {
   ApplicationState& state = applicationState();
-  Serial.printf("Starting signed OTA to %s (%lu bytes)\n", update.version,
-                (unsigned long)update.size);
+  DebugLog::printf("Starting signed OTA to %s (%lu bytes)\n", update.version,
+                   (unsigned long)update.size);
   BearSSL::WiFiClientSecure secureClient;
   secureClient.setKnownKey(state.serverPublicKey);
   HTTPClient http;
   const String url = String("https://") + state.settings.serverHost + ':' +
                      state.settings.serverPort + update.path;
   if (!http.begin(secureClient, url)) {
-    Serial.println("OTA HTTPS setup failed");
+    DebugLog::println("OTA HTTPS setup failed");
     return;
   }
   char bearer[44];
@@ -79,7 +80,7 @@ void perform(const mindflayer::protocol::UpdateAvailable& update) {
 #ifdef RBOOT_INTEGRATION
   const uint32_t signatureSize = firmwareVerifier.length(), trailerSize = signatureSize + 4;
   if (state.temporaryBoot || update.size <= trailerSize) {
-    Serial.println("OTA rejected: no safe inactive slot or invalid signed size");
+    DebugLog::println("OTA rejected: no safe inactive slot or invalid signed size");
     http.end();
     return;
   }
@@ -89,13 +90,13 @@ void perform(const mindflayer::protocol::UpdateAvailable& update) {
                            static_cast<RBootSlot::Slot>(BootControl::permanentSlot()));
   const uint32_t imageSize = update.size - trailerSize;
   if (!writer.begin(target, imageSize)) {
-    Serial.println("OTA rejected before erase by slot bounds/state");
+    DebugLog::println("OTA rejected before erase by slot bounds/state");
     http.end();
     return;
   }
   const int status = http.GET();
   if (status != HTTP_CODE_OK || http.getSize() != static_cast<int>(update.size)) {
-    Serial.printf("OTA HTTPS response rejected: %d\n", status);
+    DebugLog::printf("OTA HTTPS response rejected: %d\n", status);
     writer.abort();
     http.end();
     return;
@@ -153,7 +154,7 @@ void perform(const mindflayer::protocol::UpdateAvailable& update) {
        encodedLength == signatureSize &&
        firmwareVerifier.verify(&firmwareHash, otaSignature, signatureSize) && writer.finish();
   if (!ok) {
-    Serial.println("Signed rBoot OTA rejected; permanent slot unchanged");
+    DebugLog::println("Signed rBoot OTA rejected; permanent slot unchanged");
     writer.abort();
     http.end();
     return;
@@ -162,24 +163,24 @@ void perform(const mindflayer::protocol::UpdateAvailable& update) {
     http.end();
     return;
   }
-  Serial.printf("Validated candidate in slot %c; requesting temporary boot\n",
-                target == RBootSlot::Slot::A ? 'A' : 'B');
+  DebugLog::printf("Validated candidate in slot %c; requesting temporary boot\n",
+                   target == RBootSlot::Slot::A ? 'A' : 'B');
   http.end();
   if (!BootControl::bootTemporary(static_cast<uint8_t>(target))) {
-    Serial.println("Temporary boot request failed");
+    DebugLog::println("Temporary boot request failed");
     return;
   }
-  Serial.flush();
+  DebugLog::flush();
   ESP.restart();
 #else
   ESPhttpUpdate.rebootOnUpdate(true);
   ESPhttpUpdate.onError([](int error) {
-    Serial.printf("Signed OTA rejected: %d %s\n", error,
-                  ESPhttpUpdate.getLastErrorString().c_str());
+    DebugLog::printf("Signed OTA rejected: %d %s\n", error,
+                     ESPhttpUpdate.getLastErrorString().c_str());
   });
   const auto result = ESPhttpUpdate.update(http, FIRMWARE_VERSION);
   if (result == HTTP_UPDATE_FAILED)
-    Serial.printf("OTA failed; retaining %s\n", FIRMWARE_VERSION);
+    DebugLog::printf("OTA failed; retaining %s\n", FIRMWARE_VERSION);
   http.end();
 #endif
 }

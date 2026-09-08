@@ -2,6 +2,7 @@
 
 #include "ApplicationState.h"
 #include "BuildConfig.h"
+#include "DebugLog.h"
 #include "FirmwareUpdate.h"
 #include "LedController.h"
 
@@ -75,7 +76,8 @@ void processMessage(const uint8_t* data, size_t size) {
       sendFrame(written);
       state.registered = true;
     }
-    Serial.printf("Authenticated as %s; firmware=%s; ", state.settings.deviceId, FIRMWARE_VERSION);
+    DebugLog::printf("Authenticated as %s; firmware=%s; ", state.settings.deviceId,
+                     FIRMWARE_VERSION);
     printHeapStats();
     return;
   }
@@ -84,7 +86,7 @@ void processMessage(const uint8_t* data, size_t size) {
     state.client.close(CloseReason_GoingAway);
     state.client = WebsocketsClient();
     state.authenticated = state.wssHealthy = state.registered = false;
-    Serial.print("WSS released for signed OTA; ");
+    DebugLog::print("WSS released for signed OTA; ");
     printHeapStats();
     FirmwareUpdate::perform(update);
     reconnectRequested = true;
@@ -104,13 +106,13 @@ void processMessage(const uint8_t* data, size_t size) {
                                               true,
                                               !strcmp(accepted.version, FIRMWARE_VERSION)};
     if (mindflayer::health::shouldPromote(health)) {
-      Serial.println("Server accepted candidate; promoting transactionally");
+      DebugLog::println("Server accepted candidate; promoting transactionally");
       if (BootControl::promoteCurrentSlot(RBootTestHooks::promotionHook(),
                                           RBootTestHooks::promotionContext())) {
-        Serial.flush();
+        DebugLog::flush();
         ESP.restart();
       } else
-        Serial.println("Candidate promotion failed");
+        DebugLog::println("Candidate promotion failed");
     }
 #endif
     return;
@@ -121,7 +123,7 @@ void processMessage(const uint8_t* data, size_t size) {
                              configuration.led2.r, configuration.led2.g, configuration.led2.b);
     return;
   }
-  Serial.println("Rejected malformed or unauthorized CBOR message");
+  DebugLog::println("Rejected malformed or unauthorized CBOR message");
   state.client.close(CloseReason_ProtocolError);
 }
 
@@ -152,7 +154,7 @@ void processCallbacks() {
     eventOpened = false;
     state.authenticated = false;
     state.wssHealthy = true;
-    Serial.print("Pinned binary WSS connected; ");
+    DebugLog::print("Pinned binary WSS connected; ");
     printHeapStats();
   }
   if (eventClosed) {
@@ -160,7 +162,7 @@ void processCallbacks() {
     state.authenticated = false;
     state.wssHealthy = state.registered = false;
     reconnectRequested = true;
-    Serial.println("WSS closed; reconnecting");
+    DebugLog::println("WSS closed; reconnecting");
   }
   if (eventPing) {
     eventPing = false;
@@ -173,7 +175,7 @@ void processCallbacks() {
   if (receivedFrameInvalid) {
     receivedFrameInvalid = false;
     receivedFrameSize = 0;
-    Serial.println("Rejected non-binary, oversized, or overlapping device frame");
+    DebugLog::println("Rejected non-binary, oversized, or overlapping device frame");
     state.client.close(CloseReason_ProtocolError);
     return;
   }
@@ -191,7 +193,7 @@ void connect() {
   state.client.setKnownKey(state.serverPublicKey);
   if (!state.client.connectSecure(state.settings.serverHost, state.settings.serverPort,
                                   "/device/v1")) {
-    Serial.println("Pinned WSS connection failed");
+    DebugLog::println("Pinned WSS connection failed");
     reconnectRequested = true;
     return;
   }

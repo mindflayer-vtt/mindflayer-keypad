@@ -7,6 +7,7 @@ application orchestrator, while implementation is grouped by action domain:
 | -------------------- | --------------------------------------------------------------------------------- |
 | `Application`        | boot sequencing, provisioned Wi-Fi startup, and top-level health/rollback loop    |
 | `ApplicationState`   | shared runtime state and heap diagnostics                                         |
+| `DebugLog`           | provisioning-controlled runtime diagnostics, disabled by default                  |
 | `SerialProvisioning` | serial envelope reception and double-reset recovery markers                       |
 | `DeviceConnection`   | pinned WebSocket lifecycle, authentication, protocol dispatch, and key events     |
 | `FirmwareUpdate`     | HTTPS download, signature verification, inactive-slot writing, and temporary boot |

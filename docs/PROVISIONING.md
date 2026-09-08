@@ -1,4 +1,4 @@
-# Mind Flayer Provisioning Format v1
+# Mind Flayer Provisioning Format v2
 
 One generic signed firmware contains hardware definitions, QCBOR, the device protocol, and the firmware-signing public key. Installation data is supplied later over trusted serial and stored in two dedicated raw flash sectors. No filesystem, device ID, HMAC secret, Wi-Fi credential, server address, or server TLS key participates in compiling or signing `firmware.bin`.
 
@@ -6,7 +6,9 @@ One generic signed firmware contains hardware definitions, QCBOR, the device pro
 
 The host sends exactly: bytes 0..3 magic `MFP1`; byte 4 envelope version `1`; bytes 5..6 unsigned big-endian CBOR payload length (1..1024); the payload; then a big-endian CRC32. CRC covers magic, version, length, and payload. The variant is CRC-32/ISO-HDLC (reflected polynomial `0xEDB88320`, init/xorout `0xFFFFFFFF`), whose `123456789` check is `0xCBF43926`. Maximum envelope size is 1,035 bytes.
 
-The definite-length CBOR map uses integer keys: `0` schema version 1; `1` device ID text 1..64; `2` exactly 32 secret bytes; `3` SSID text 1..32; `4` Wi-Fi password text 0..63; `5` server host text 1..253; `6` port 1..65535; `7` DER/SPKI RSA server public key bytes 32..512. All keys are required. Duplicate, unsupported, missing, mistyped or oversized fields, embedded NUL text, unsupported versions, invalid/non-RSA DER, indefinite encodings, trailing bytes, or invalid CRC are rejected. The host emits canonical CBOR and its verifier decodes, validates, and byte-for-byte canonical-round-trips the payload before serial transmission. Version 1 rejects unknown keys; a future schema version must define its own policy.
+The definite-length CBOR map uses integer keys: `0` schema version 2; `1` device ID text 1..64; `2` exactly 32 secret bytes; `3` SSID text 1..32; `4` Wi-Fi password text 0..63; `5` server host text 1..253; `6` port 1..65535; `7` DER/SPKI RSA server public key bytes 32..512; `8` serial-debug Boolean. All keys are required in schema v2. Duplicate, unsupported, missing, mistyped or oversized fields, embedded NUL text, unsupported versions, invalid/non-RSA DER, indefinite encodings, trailing bytes, or invalid CRC are rejected. The host emits canonical CBOR and its verifier decodes, validates, and byte-for-byte canonical-round-trips the payload before serial transmission.
+
+Schema-v1 records remain readable for OTA compatibility and behave as `serialDebug=false`. New bundles use schema v2. Runtime diagnostics are disabled by default and enabled only when `MINDFLAYER_SERIAL_DEBUG=true` is explicitly supplied to the server bundle tool. Serial recovery-mode identification and provisioning success/error acknowledgements are protocol control output and remain available regardless of the diagnostic setting.
 
 ## Physical flash layout
 
@@ -54,6 +56,7 @@ MINDFLAYER_DATA_DIR=data \
 MINDFLAYER_WIFI_SSID='temporary-ap' \
 MINDFLAYER_WIFI_PASSWORD='temporary-password' \
 MINDFLAYER_SERVER_HOST='10.42.0.1' \
+MINDFLAYER_SERIAL_DEBUG=false \
 npm run device:bundle -- controller1 provisioning/controller1.provisioning.bin
 npm run device:serial-provision -- provisioning/controller1.provisioning.bin /dev/serial/by-path/...
 ```

@@ -199,8 +199,7 @@ void test_crc_and_envelope() {
   TEST_ASSERT_EQUAL_HEX32(0xcbf43926, provisioning::crc32((const uint8_t*)"123456789", 9));
   uint8_t e[provisioning::MAX_ENVELOPE_SIZE];
   auto p = sample();
-  size_t n = envelope(p, e);
-  const char* fixture =
+  const char* legacyFixture =
       "4d465031010194a80001016b636f6e74726f6c6c6572310258201111111111111111111111111111111111111111"
       "1111111111111111111111110367746573742d617004781c636f727265637420686f727365206261747465727920"
       "737461706c65056931302e34322e302e31061928cb0759012630820122300d06092a864886f70d01010105000382"
@@ -211,10 +210,18 @@ void test_crc_and_envelope() {
       "da756cc314dd01d3fd9e9e5a5768963f831cc3270db8a8474a55191749a7cfbcfde719129d2eab6b206b862f58de"
       "e5db75e4de4114b6c4b2f51a8d383becd40c95a7e89888309234a3c3b3ea19a1d3f355ccf5470203010001fa6fb8"
       "d9";
-  assertBytes(e, n, fixture);
   provisioning::Provisioning decoded;
+  size_t n = fromHex(legacyFixture, e, sizeof(e));
   TEST_ASSERT_TRUE(provisioning::decodeEnvelope(e, n, decoded));
   TEST_ASSERT_EQUAL_STRING(p.deviceId, decoded.deviceId);
+  TEST_ASSERT_FALSE(decoded.serialDebug);
+  n = envelope(p, e);
+  TEST_ASSERT_TRUE(provisioning::decodeEnvelope(e, n, decoded));
+  TEST_ASSERT_FALSE(decoded.serialDebug);
+  p.serialDebug = true;
+  n = envelope(p, e);
+  TEST_ASSERT_TRUE(provisioning::decodeEnvelope(e, n, decoded));
+  TEST_ASSERT_TRUE(decoded.serialDebug);
   e[20] ^= 1;
   TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e, n, decoded));
 }
@@ -321,12 +328,24 @@ void test_envelope_bounds_schema_and_semantics() {
   n = envelope(p, e);
   TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e, n - 1, out));
   size_t payload = provisioning::ENVELOPE_HEADER_SIZE;
-  e[payload + 2] = 2;
+  e[payload + 2] = 3;
+  refreshEnvelopeCrc(e, n);
+  TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e, n, out));
+  n = envelope(p, e);
+  payload = provisioning::ENVELOPE_HEADER_SIZE;
+  e[payload + 2] = 1;
+  refreshEnvelopeCrc(e, n);
+  TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e, n, out));
+  n = envelope(p, e);
+  const uint8_t debugHeader[] = {8, 0xf4};
+  size_t at = findBytes(e, n, debugHeader, sizeof(debugHeader));
+  TEST_ASSERT_TRUE(at < n);
+  e[at + 1] = 0;
   refreshEnvelopeCrc(e, n);
   TEST_ASSERT_FALSE(provisioning::decodeEnvelope(e, n, out));
   n = envelope(p, e);
   const uint8_t secretHeader[] = {2, 0x58, 0x20};
-  size_t at = findBytes(e, n, secretHeader, sizeof(secretHeader));
+  at = findBytes(e, n, secretHeader, sizeof(secretHeader));
   TEST_ASSERT_TRUE(at < n);
   e[at + 2] = 31;
   refreshEnvelopeCrc(e, n);
