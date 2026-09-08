@@ -10,8 +10,8 @@
   "scripts": {
     "format": "npm run format:cpp && npm run format:docs",
     "format:check": "npm run format:cpp:check && npm run format:docs:check",
-    "format:cpp": "clang-format -i src/*.{cpp,h} include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
-    "format:cpp:check": "clang-format --dry-run --Werror src/*.{cpp,h} include/*.h lib/*/*.{cpp,h} test/*/*.cpp scripts/rboot-integration.h",
+    "format:cpp": "clang-format -i src/*.cpp src/*.h include/*.h lib/*/*.cpp lib/*/*.h test/*/*.cpp test/host/*.h test/host/application/*.h scripts/*.h",
+    "format:cpp:check": "clang-format --dry-run --Werror src/*.cpp src/*.h include/*.h lib/*/*.cpp lib/*/*.h test/*/*.cpp test/host/*.h test/host/application/*.h scripts/*.h",
     "format:docs": "prettier --write '**/*.{md,json,yml,yaml}'",
     "format:docs:check": "prettier --check '**/*.{md,json,yml,yaml}'"
   },

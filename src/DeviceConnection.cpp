@@ -20,6 +20,8 @@ namespace {
 using namespace websockets;
 namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 namespace protocol = mindflayer::protocol;
+static_assert(_WS_CONFIG_MAX_MESSAGE_SIZE == protocol::MAX_DEVICE_FRAME_SIZE,
+              "WebSocket pre-allocation limit differs from protocol limit");
 
 uint8_t frameBuffer[protocol::MAX_DEVICE_FRAME_SIZE];
 uint8_t pendingFrame[protocol::MAX_DEVICE_FRAME_SIZE];
@@ -214,6 +216,8 @@ void begin() { connect(); }
 
 void poll() {
   ApplicationState& state = applicationState();
+  // The pinned transport processes at most one frame per poll. Dispatch outside
+  // its callback before consuming the next buffered frame (including TLS batches).
   state.client.poll();
   processCallbacks();
   flushFrame();
