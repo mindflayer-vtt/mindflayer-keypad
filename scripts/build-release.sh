@@ -37,13 +37,13 @@ else
   exit 1
 fi
 scripts/build-rboot.sh
-PLATFORMIO_BUILD_FLAGS="-DFIRMWARE_VERSION=\\\"$version\\\"" "$pio" run -e controller_1_rboot
+PLATFORMIO_BUILD_FLAGS="-DFIRMWARE_VERSION=\\\"$version\\\"" "$pio" run -e keypad_rboot
 python3 scripts/verify-rboot-image.py \
-  --elf .pio/build/controller_1_rboot/firmware.elf \
-  --image .pio/build/controller_1_rboot/rboot-app.bin \
+  --elf .pio/build/keypad_rboot/firmware.elf \
+  --image .pio/build/keypad_rboot/rboot-app.bin \
   --esptool2 .pio/rboot-upstream/esptool2/esptool2
 test "$(wc -c < .pio/rboot-artifacts/rboot.bin)" -le 4096
 scripts/sign-firmware.sh \
-  .pio/build/controller_1_rboot/rboot-app.bin \
+  .pio/build/keypad_rboot/rboot-app.bin \
   "$private_key" mindflayer-keypad-v1 "$version" dist/firmware
 tar -C dist/firmware -czf "dist/mindflayer-keypad-$version-server-firmware.tar.gz" .

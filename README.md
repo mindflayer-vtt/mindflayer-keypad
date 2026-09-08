@@ -48,13 +48,34 @@ The production build is generic: it does not read `config.h` or any installation
 
 Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses the ESP8266 DMA backend on that physical pin, so UART RX is intentionally available only in the special unprovisioned/double-reset recovery mode documented in [docs/PROVISIONING.md](docs/PROVISIONING.md). The host provisioning tool enters that mode automatically through two FTDI RTS reset pulses.
 
-## Flashing
+## Initial rBoot installation
 
-1. Connect the wemos d1 mini to the PC with USB
-2. Run the following command to flash the controller
-   ```bash
-   platformio run -e controller_1 -t upload
-   ```
+The production OTA layout requires a one-time serial installation of rBoot, two transactional metadata sectors, and the application in slot A. Connect any supported 4 MiB ESP8266 board over USB serial and identify its port (prefer a stable `/dev/serial/by-id/...` or `/dev/serial/by-path/...` name). The installer accepts any port and MAC address, but asks esptool to identify the target and stops unless it is an ESP8266.
+
+Build the pinned bootloader and initial application, then generate the two metadata sectors:
+
+```sh
+./scripts/build-rboot.sh
+.venv/bin/pio run -e keypad_rboot
+.venv/bin/python scripts/make-rboot-config.py .pio/rboot-artifacts/metadata-a.bin --slot a --generation 1
+.venv/bin/python scripts/make-rboot-config.py .pio/rboot-artifacts/metadata-b.bin --state erased
+```
+
+Install them, replacing `PORT` with the connected ESP8266 serial device and choosing a new backup directory:
+
+```sh
+.venv/bin/python scripts/install-rboot.py \
+  --port PORT \
+  --rboot .pio/rboot-artifacts/rboot.bin \
+  --metadata-a .pio/rboot-artifacts/metadata-a.bin \
+  --metadata-b .pio/rboot-artifacts/metadata-b.bin \
+  --slot-a .pio/build/keypad_rboot/rboot-app.bin \
+  --backup-dir .hwtest/initial-rboot-backup
+```
+
+This writes only rBoot at `0x000000`, metadata at `0x001000` and `0x100000`, and slot A at `0x002000`. Before writing, it backs up both provisioning sectors (`0x3f9000` and `0x3fa000`); afterward it reads them again and requires identical SHA-256 digests. The backup directory must not already exist. Keep that directory until the keypad has booted and its provisioning has been verified. Installing rBoot replaces the existing application image, so do not interrupt the write or use this command for an ESP8266 with a different flash layout.
+
+For a blank device, install rBoot first and then perform the serial provisioning workflow in [docs/PROVISIONING.md](docs/PROVISIONING.md). For an already provisioned keypad, the preserved sectors allow the rBoot application to reuse its existing settings.
 
 ## Secure server-managed updates
 
@@ -66,10 +87,10 @@ For a disposable local signing key and a framework-compatible signed artifact pl
 
 ```sh
 ./scripts/generate-test-signing-key.sh
-.venv/bin/pio run -e controller_1
+.venv/bin/pio run -e keypad
 ./scripts/build-rboot.sh
-.venv/bin/pio run -e controller_1_rboot
-./scripts/sign-firmware.sh .pio/build/controller_1_rboot/rboot-app.bin keys/signing-private.pem mindflayer-keypad-v1 1.2.3 artifacts
+.venv/bin/pio run -e keypad_rboot
+./scripts/sign-firmware.sh .pio/build/keypad_rboot/rboot-app.bin keys/signing-private.pem mindflayer-keypad-v1 1.2.3 artifacts
 ```
 
 `include/HardwareConfig.h` is the global firmware-signing trust domain. Its public key must match the private key used by the signing command; generating a replacement keypair requires deliberately updating that global public key and rebuilding all generic firmware. Provisioning never changes this key.
@@ -89,6 +110,6 @@ mindflayer-keypad-v1/1.2.3/firmware.bin.signed
 
 The manifest's hardware ID, semantic-release version, relative path, size, and SHA-256 match the server's firmware repository contract. The server can then target provisioned keypads at that version; it does not need and must never receive the signing key.
 
-The rBoot production path downloads this signed boot2 image into the inactive slot, validates transport hash, RSA signature, structure, and full IROM/RAM checksum, then boots it once. Promotion requires explicit server acceptance after the complete application health gate. See [docs/OTA_BOOT.md](docs/OTA_BOOT.md). The additive `controller_1` environment remains available as the pre-migration eboot build; it is not an rBoot OTA artifact.
+The rBoot production path downloads this signed boot2 image into the inactive slot, validates transport hash, RSA signature, structure, and full IROM/RAM checksum, then boots it once. Promotion requires explicit server acceptance after the complete application health gate. See [docs/OTA_BOOT.md](docs/OTA_BOOT.md). The generic `keypad` environment remains available as the pre-migration eboot build; it is not an rBoot OTA artifact. Legacy `controller_1*` environment names remain as compatibility aliases.
 
 For isolated hardware tests, `scripts/hwtest-network-up.sh` creates a namespaced WPA2 2.4 GHz NetworkManager AP and stores credentials only under ignored `.hwtest/`. `scripts/hwtest-network-down.sh` removes only that generated profile. Always tear it down and confirm the original default route remains.

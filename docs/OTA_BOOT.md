@@ -23,7 +23,7 @@ Production uses rBoot 1.4.2 commit `614f33685d0dd990fc4202f2409b0d2365eeaef3` an
 
 ## Build and release flow
 
-`controller_1_rboot` links IROM at `0x40202010`. A build-local copy of SDK `libmain.a` weakens `Cache_Read_Enable_New`; the intended big-flash implementation supplies the only strong definition. The ELF verifier checks both facts and map ownership. `elf2rboot.py` emits SDK boot2 EA/04 plus E9 format with full-IROM checksum; CI compares it byte-for-byte with pinned esptool2. The ordinary Arduino `firmware.bin` contains eboot and must never be published as a slot image.
+`keypad_rboot` links IROM at `0x40202010`. A build-local copy of SDK `libmain.a` weakens `Cache_Read_Enable_New`; the intended big-flash implementation supplies the only strong definition. The ELF verifier checks both facts and map ownership. `elf2rboot.py` emits SDK boot2 EA/04 plus E9 format with full-IROM checksum; CI compares it byte-for-byte with pinned esptool2. The ordinary Arduino `firmware.bin` contains eboot and must never be published as a slot image.
 
 CI signs `rboot-app.bin` with the offline/CI RSA private key and publishes only the signed application plus size and SHA-256 metadata. The server stores it and never receives a private signing key. rBoot and initial metadata are serial-install artifacts, not OTA artifacts.
 
@@ -50,12 +50,12 @@ Build the artifacts and committed initial metadata:
 
 ```sh
 scripts/build-rboot.sh
-.venv/bin/pio run -e controller_1_rboot
+.venv/bin/pio run -e keypad_rboot
 python scripts/make-rboot-config.py .pio/rboot-artifacts/metadata-a.bin --slot a --generation 1
 python scripts/make-rboot-config.py .pio/rboot-artifacts/metadata-b.bin --state erased
 ```
 
-Then use `scripts/install-rboot.py` with the stable `/dev/serial/by-path/...usb-0:4.1:...` path, the four artifacts, and a new backup directory. The installer rejects any other physical topology, verifies MAC `3c:61:05:cf:d1:54`, backs up only the two provisioning sectors, writes explicit bootloader/metadata/slot-A addresses, rereads provisioning, and requires identical SHA-256 values. esptool controls RTS/DTR, so no button press is required. It does not back up the old application binary and never erases the whole chip.
+Then use `scripts/install-rboot.py` with the serial port, the four artifacts, and a new backup directory. The installer uses esptool to require an ESP8266, but does not couple installation to a particular port topology, board name, or MAC address. It backs up only the two provisioning sectors, writes explicit bootloader/metadata/slot-A addresses, rereads provisioning, and requires identical SHA-256 values. esptool controls RTS/DTR on supported USB adapters, so no button press is normally required. It does not back up the old application binary and never erases the whole chip. The complete command sequence is in the top-level README.
 
 ## Update and rollback
 
