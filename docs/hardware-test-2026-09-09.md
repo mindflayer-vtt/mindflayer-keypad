@@ -206,3 +206,13 @@ The server observed authenticated registration of `0.0.2-hwtest.1` at 19:12:52
 UTC. The owner confirmed that the red/yellow/green boot LED progression worked.
 Both the unprovisioned pulse and transition back to provisioned operation have
 therefore been checked on physical keypad 2.
+
+### Concurrent LED commands and button input
+
+At 19:14:04–19:14:24 UTC, the harness sent its complete LED sequence while the
+operator pressed all eleven keys on keypad 2 running `0.0.2-hwtest.1`. Every key
+reached the Foundry-facing receiver with matching down/up counts, and the session
+remained connected. Per-key pair counts were Q/W/A/D/Z/Shift/Space: 1, S/X: 2,
+C: 4, E: 6. Thus no key was wholly missing during this pass, but repeated
+transitions remain unresolved. The sequence ended with both LEDs commanded dim
+green; physical confirmation of this concurrent sequence is pending.
