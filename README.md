@@ -47,6 +47,15 @@ The firmware source is organized by runtime domain; see [docs/ARCHITECTURE.md](d
 
 Native and transport regression-test commands are documented in [docs/TESTING.md](docs/TESTING.md).
 
+## Restart shortcut
+
+While the keypad is connected and authenticated, hold **Shift + Space + E**
+together to restart it. Release the keys when it restarts to avoid triggering
+another restart after reconnection. This does not erase provisioning or perform
+a factory reset. The shortcut uses the normal key scanner; it is not available
+in serial provisioning mode or while startup is waiting for Wi-Fi. The keys are
+also sent to the server as ordinary key events.
+
 ## Generic firmware and provisioning
 
 The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [docs/PROVISIONING.md](docs/PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.

@@ -30,6 +30,9 @@ class ApplicationDeadlineTest(unittest.TestCase):
             with self.subTest(scenario=scenario):
                 subprocess.run([self.binary, scenario], check=True, timeout=5)
 
+    def test_restart_shortcut_requires_shift_space_e(self):
+        subprocess.run([self.binary, "restart-shortcut"], check=True, timeout=5)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,6 +16,12 @@ The Python runner needs a host `g++` with AddressSanitizer and UndefinedBehavior
 
 `test/host/application_deadline.cpp` links the real `src/Application.cpp` against simulated SDK time, flash settings, and network I/O. Its six scenarios check unavailable Wi-Fi, provisioning failure, invalid server-key loading, a yielding connection stall, a yielding poll stall, and a permanent boot that must not time out. Temporary scenarios must restart at exactly 90 seconds even when the application has not returned from `setup()` or `poll()`. These tests failed against the original scheduling logic before the fix.
 
+The same host runner checks the restored Shift + Space + E restart shortcut for
+all 4,096 matrix-state combinations, both provisioned and unprovisioned. E and
+both modifiers are required; the old Q-based combination and incomplete chords
+must not restart. This regression failed before restoring the handler. It tests
+the application decision, not physical scanning or switch debounce.
+
 `test/host/websocket_transport.cpp` compiles the pinned library's actual endpoint, client, message, and support sources with a fake TCP socket. Nine scenarios exercise exactly 512 bytes, oversized 16-bit and 64-bit length declarations, valid and oversized fragmentation with an interleaved ping, multiple buffered messages, one-byte TCP reads, and stalled header/body reads. An allocation guard prevents large advertised lengths from exhausting the test host. The oversized cases must disconnect at the header without reading a body, and two buffered messages must be delivered on separate polls. The corresponding regressions failed against the original transport before the fix.
 
 `test/test_install_rboot.py` runs the installer with a mocked esptool interface and metadata produced by the real generator. It covers artifact size boundaries, corrupt images and metadata, unsafe slot selection, flash-capacity checks, backup failures, private backup permissions, pre-write manifests, failed writes, provisioning readback, and validated snapshots surviving source-file changes. Invalid local inputs must fail before any serial access; failed target checks or incomplete backups must prevent every flash write. A layout regression checks the installer's constants against the firmware header. Run this suite alone without a compiler or hardware:

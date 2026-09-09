@@ -75,6 +75,13 @@ The harness saves timestamped events and LED commands in `events.jsonl`. It does
 automatically mark a test successful. Record operator observations separately and
 distinguish them from programmatically observed results.
 
+With firmware containing the restart shortcut, hold Shift + Space + E together
+and release when the keypad restarts. Confirm disconnection followed by a fresh
+authenticated registration, and confirm provisioning is retained. These keys
+still produce ordinary server events. Shift + Space + Q must not restart it.
+The shortcut uses normal scanning while connected; it does not replace serial
+recovery or reset a keypad stuck waiting for Wi-Fi during startup.
+
 ## Stop
 
 Type `quit` (or press Ctrl-C) to send both LEDs off and stop the test listeners.

@@ -23,6 +23,17 @@ extern "C" {
 namespace {
 namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 namespace provisioning = mindflayer::provisioning;
+
+void handleRestartShortcut() {
+  const auto& keys = *KeyboardMatrix::getState();
+  // Physical matrix positions: E, Shift, Space. Check the completed scan rather
+  // than acting inside a key callback while the other rows are still stale.
+  if (keys[0][2].isDown && keys[3][0].isDown && keys[3][2].isDown) {
+    DebugLog::println("Shift+Space+E: restarting");
+    ESP.restart();
+  }
+}
+
 #ifdef RBOOT_INTEGRATION
 constexpr uint32_t TEMPORARY_HEALTH_TIMEOUT_MS = 90000;
 os_timer_t temporaryHealthTimer;
@@ -115,6 +126,7 @@ void loop() {
     return;
   }
   DeviceConnection::poll();
+  handleRestartShortcut();
 #ifdef RBOOT_INTEGRATION
   const uint32_t temporaryElapsed = millis() - state.temporaryStarted;
   RBootTestHooks::maybeFailBeforeServerAcknowledgement(state.temporaryBoot, temporaryElapsed);

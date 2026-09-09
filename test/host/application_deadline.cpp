@@ -13,12 +13,19 @@ extern "C" {
 
 bool wifiConnected = true, publicKeyValid = true;
 namespace {
+namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 uint32_t now = 0;
 os_timer_t* sdkTimer = nullptr;
 bool temporary = true, stored = true;
 uint32_t connectDelay = 0, pollDelay = 0;
 ApplicationState state;
 struct Restart {};
+KeyboardMatrix::KeyState matrix[4][3] = {
+    {{"Q"}, {"W"}, {"E"}},
+    {{"A"}, {"S"}, {"D"}},
+    {{"Z"}, {"X"}, {"C"}},
+    {{"SHI"}, {""}, {"SPC"}},
+};
 } // namespace
 
 extern "C" {
@@ -83,7 +90,12 @@ void begin() {}
 void setColors(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t) {}
 } // namespace LedController
 namespace com::viromania::vtt::wss::KeyboardMatrix {
+KeyState::KeyState(const char* name) : isDown(false) {
+  std::strncpy(key, name, 3);
+  key[3] = 0;
+}
 void initMatrix() {}
+KeyState (*getState())[4][3] { return &matrix; }
 } // namespace com::viromania::vtt::wss::KeyboardMatrix
 namespace DeviceConnection {
 void begin() { delay(connectDelay); }
@@ -96,6 +108,28 @@ void maybeFailBeforeServerAcknowledgement(bool, uint32_t) {}
 int main(int argc, char** argv) {
   assert(argc == 2);
   const std::string scenario = argv[1];
+  if (scenario == "restart-shortcut") {
+    temporary = false;
+    // Exercise the real application loop for every combination of all 12 matrix
+    // positions, including the unused position and the old Q-based shortcut.
+    for (unsigned mask = 0; mask < 4096; ++mask) {
+      for (unsigned index = 0; index < 12; ++index)
+        matrix[index / 3][index % 3].isDown = (mask & (1u << index)) != 0;
+      const unsigned chord = (1u << 2) | (1u << 9) | (1u << 11);
+      for (bool provisioned : {false, true}) {
+        state.provisioned = provisioned;
+        bool restarted = false;
+        try {
+          Application::loop();
+        } catch (const Restart&) {
+          restarted = true;
+        }
+        assert(restarted == (provisioned && (mask & chord) == chord));
+      }
+    }
+    std::puts("restart shortcut regression passed");
+    return 0;
+  }
   if (scenario == "wifi-unavailable")
     wifiConnected = false;
   else if (scenario == "provisioning-failure")
