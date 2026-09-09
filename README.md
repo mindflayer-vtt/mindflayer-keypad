@@ -57,7 +57,7 @@ in serial provisioning mode or while startup is waiting for Wi-Fi. The keys are
 also sent to the server as ordinary key events.
 
 The key matrix is sampled at a minimum interval of 5 ms. Each key independently
-requires 20 ms of stable sampled input before a press or release is reported;
+requires 30 ms of stable sampled input before a press or release is reported;
 shorter glitches are ignored and holding a key does not generate repeats. The
 restart shortcut uses this debounced state too.
 

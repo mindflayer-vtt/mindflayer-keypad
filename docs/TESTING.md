@@ -16,10 +16,12 @@ The Python runner needs a host `g++` with AddressSanitizer and UndefinedBehavior
 
 `test/test_keyboard_matrix.py` compiles the real GPIO scanner against deterministic
 switch and time doubles. Seven scenarios verify all eleven key mappings and the
-unused position, 20 ms press/release debounce, held keys without repeats, short
+unused position, 30 ms press/release debounce, held keys without repeats, short
 glitches, independent keys and modifiers, complete state snapshots before callbacks,
 released row pins during network callbacks, 32-bit timer wraparound, and reset of
-filter state on reinitialization. The scenarios failed against the old scanner.
+filter state on reinitialization. The original scenarios failed against the old
+scanner; the updated timing checks also reject the previous 20 ms threshold,
+including 25 ms press/release glitches that must now be ignored.
 Run this suite alone with:
 
 ```sh

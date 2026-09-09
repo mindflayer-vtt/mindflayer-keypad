@@ -9,7 +9,7 @@ namespace wss {
 namespace KeyboardMatrix {
 
 constexpr uint32_t SCAN_INTERVAL_MS = 5;
-constexpr uint32_t DEBOUNCE_MS = 20;
+constexpr uint32_t DEBOUNCE_MS = 30;
 
 struct KeyState {
   KeyState(const char* setKey);

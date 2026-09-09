@@ -94,13 +94,13 @@ int main(int argc, char** argv) {
       for (unsigned col = 0; col < 3; ++col) {
         events.clear();
         pressed[row][col] = true;
-        advance(24);
+        advance(34);
         assert(events.empty());
         advance(1);
         assert(events.size() == (names[row][col][0] ? 1u : 0u));
         advance(1000);
         pressed[row][col] = false;
-        advance(24);
+        advance(34);
         assert(events.size() == (names[row][col][0] ? 1u : 0u));
         advance(1);
         if (names[row][col][0])
@@ -115,34 +115,34 @@ int main(int argc, char** argv) {
       advance(5);
       assert(events.empty());
     }
-    advance(19);
+    advance(29);
     assert(events.empty());
     advance(1);
-    assert(events.size() == 1 && events[0].time == 45);
+    assert(events.size() == 1 && events[0].time == 55);
     advance(1000);
     for (bool level : {false, true, false, true, false}) {
       pressed[1][1] = level;
       advance(5);
       assert(events.size() == 1);
     }
-    advance(20);
+    advance(30);
     expectPair("S");
   } else if (scenario == "glitches") {
     pressed[0][0] = true;
-    advance(15);
+    advance(25); // Longer than the old threshold, shorter than 30 ms.
     pressed[0][0] = false;
     advance(30);
     assert(events.empty());
     pressed[0][0] = true;
-    advance(25);
+    advance(35);
     assert(events.size() == 1);
     pressed[0][0] = false;
-    advance(15);
+    advance(25);
     pressed[0][0] = true;
     advance(30);
     assert(events.size() == 1);
     pressed[0][0] = false;
-    advance(25);
+    advance(35);
     expectPair("Q");
   } else if (scenario == "independent") {
     pressed[3][0] = true;
@@ -155,32 +155,32 @@ int main(int argc, char** argv) {
       advance(5);
     }
     assert(events.size() == 3);
-    assert(events[0].key == "SHI" && events[0].time == 25);
-    assert(events[1].key == "SPC" && events[1].time == 30);
-    assert(events[2].key == "E" && events[2].time == 35);
+    assert(events[0].key == "SHI" && events[0].time == 35);
+    assert(events[1].key == "SPC" && events[1].time == 40);
+    assert(events[2].key == "E" && events[2].time == 45);
   } else if (scenario == "snapshot") {
     pressed[0][2] = pressed[3][0] = pressed[3][2] = true;
     expectChordSnapshot = true;
-    advance(25);
+    advance(35);
     assert(events.size() == 3);
   } else if (scenario == "wrap") {
     const uint32_t started = now;
     pressed[2][1] = true;
-    advance(24);
+    advance(34);
     assert(events.empty());
     advance(1);
-    assert(events.size() == 1 && uint32_t(events[0].time - started) == 25);
+    assert(events.size() == 1 && uint32_t(events[0].time - started) == 35);
     pressed[2][1] = false;
-    advance(25);
+    advance(35);
     expectPair("X");
   } else if (scenario == "reinitialize") {
     pressed[0][0] = true;
-    advance(25);
+    advance(35);
     assert((*matrix::getState())[0][0].isDown);
     matrix::initMatrix();
     events.clear();
     assert(!(*matrix::getState())[0][0].isDown);
-    advance(24);
+    advance(34);
     assert(events.empty());
     advance(1);
     assert(events.size() == 1 && events[0].down);
