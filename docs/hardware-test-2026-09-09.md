@@ -72,4 +72,34 @@ state under ignored `.hwtest/e2e-20260909-keypad2/`.
 The same artifact hashes above were flashed and verified. Serial provisioning
 was acknowledged, and the device authenticated and registered with the server
 at 18:40:56 UTC. The owner observed the expected red left startup LED.
-The independent LED sequence and button results are pending.
+The owner confirmed the complete LED sequence and both dim green afterward.
+All eleven keys reached the Foundry-facing receiver in the requested order;
+the server remained connected. The pass ran at 18:42:05–18:42:14 UTC.
+
+| Key   | Down events | Up events |
+| ----- | ----------- | --------- |
+| Q     | 1           | 1         |
+| W     | 2           | 2         |
+| E     | 1           | 1         |
+| A     | 1           | 1         |
+| S     | 7           | 7         |
+| D     | 3           | 3         |
+| Z     | 5           | 5         |
+| X     | 2           | 2         |
+| C     | 1           | 1         |
+| Shift | 1           | 1         |
+| Space | 1           | 1         |
+
+## Comparison so far
+
+Both boards passed the operator-observed LED sequence and authenticated through
+the same firmware/server path. X and Space both registered on keypad 2, so their
+protocol mappings are not universally broken. Keypad 6's consistently absent X
+remains board-dependent in these observations, but its physical cause is unproven.
+
+Extra transitions occur on both boards, especially S. Neither board passes a
+one-press/one-release acceptance check. Raw matrix diagnostics are still needed
+to distinguish contact behavior from scanning/electrical timing; the lack of
+debounce alone does not establish the cause of missing events. No firmware changes
+or soldering have been performed to address these findings. Test services and the
+hotspot remain running for further investigation.
