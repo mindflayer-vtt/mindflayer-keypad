@@ -90,6 +90,24 @@ the server remained connected. The pass ran at 18:42:05–18:42:14 UTC.
 | Shift | 1           | 1         |
 | Space | 1           | 1         |
 
+### Keypad 2 repeat pass
+
+The second ordered pass, 18:43:33–18:43:46 UTC, again registered every key and
+ended with matching down/up counts and a connected server session. Per-key
+press/release pair counts were:
+
+| Keys                        | Pairs per key |
+| --------------------------- | ------------- |
+| Q, W, A, Z, X, Shift, Space | 1             |
+| C                           | 2             |
+| S                           | 4             |
+| E, D                        | 5             |
+
+X and Space were clean in this pass. The set of keys with extra transitions
+changed between passes: E was previously clean, while W, Z, and X became clean.
+Thus keypad 2 shows intermittent extra transitions, not consistently missing
+keys. This still does not establish their electrical or software cause.
+
 ## Comparison so far
 
 Both boards passed the operator-observed LED sequence and authenticated through
