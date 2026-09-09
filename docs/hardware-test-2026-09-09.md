@@ -381,3 +381,18 @@ At 21:39:39 UTC keypad 1 authenticated as `hwtest-keypad1` and registered
 was asked to exercise all eleven keys after both LEDs reach dim green. Physical
 LED confirmation and keypress results are pending; successful command transmission
 alone is not counted as a hardware pass.
+
+### Keypad 1 first pass
+
+All nine LED commands were sent at 21:40:02–21:40:22 UTC, ending with both LEDs
+commanded dim green. Physical color confirmation is still pending. A single Q
+pair arrived at 21:40:03 during the sequence; it is separate from the later pass,
+not evidence of Q bounce.
+
+The completed full-key exercise at 21:40:23–21:40:30 UTC registered Q, W, E, S,
+D, Z, X, C, and Space, but no A or Shift events. Q/W/E/S/D/Z/X/C each produced
+one down/up pair in that pass. Space produced two pairs at 21:40:30.020/.060 and
+21:40:30.150/.195 UTC. The device remained connected and all reported keys ended
+released. Thus this board does not yet pass: A/Shift are absent and Space has an
+extra pair despite 30 ms debounce. An isolated repeat is needed before assigning
+the cause to filtering or particular hardware components.
