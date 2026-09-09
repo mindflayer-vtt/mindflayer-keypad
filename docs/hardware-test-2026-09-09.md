@@ -344,3 +344,11 @@ installed. Post-reflow key behavior remains to be checked after authentication.
 
 At 19:49:57 UTC keypad 6 authenticated on the shared server as `hwtest-keypad6`
 and registered `0.0.0-dev`. The receiver is ready for a post-reflow full-key pass.
+
+The operator completed the post-reflow pass at 19:51:08–19:51:14 UTC. X and C
+again produced no events. The other nine keys registered with matched down/up
+counts: Q/W/E each 2 pairs, A/S/D/Z/Shift each 1, and Space 3. The connection
+remained active and all reported keys ended released. Reflow therefore did not
+restore X/C in this test. Firmware remains the original non-debounced build, so
+the 30 ms filter cannot explain their absence. These observations do not identify
+whether the remaining physical fault is in a switch, connection, or PCB trace.
