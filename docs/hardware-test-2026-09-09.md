@@ -216,3 +216,55 @@ remained connected. Per-key pair counts were Q/W/A/D/Z/Shift/Space: 1, S/X: 2,
 C: 4, E: 6. Thus no key was wholly missing during this pass, but repeated
 transitions remain unresolved. The sequence ended with both LEDs commanded dim
 green. The operator confirmed the LEDs worked and the button sequence was complete.
+
+## Keypad 6 after reseating; debounce preparation
+
+The first post-reseating exercise was not captured because the running test
+deployment still used keypad 2's separate server TLS identity. Switching back to
+keypad 6's original deployment restored authenticated `0.0.0-dev` registration at
+19:23:22 UTC. No firmware or provisioning change was made to keypad 6 for this pass.
+The operator then exercised all keys at 19:25:12–19:25:18 UTC. Pair counts were
+Q: 2, W: 1, E: 2, A: 2, S: 1, D: 2, Z: 1, X: 0, C: 0, Shift: 4, Space: 6.
+Reseating did not restore X/C in this pass, and repeated transitions remain on
+several working keys. The operator is investigating switches/soldering on keypad 6;
+the exact physical cause has not been established by these server observations.
+
+Firmware `0.0.3-hwtest.1` adds independent 20 ms stable-input debounce to presses
+and releases, with no held-key repeats. Seven deterministic scanner scenarios
+failed against the old implementation and pass with the new filter. The full
+38-method host suite, formatting checks, and both production firmware layouts pass.
+This is not yet a physical debounce result.
+
+The test harness now tracks every provisioned ID separately and supports targeted
+LED commands. The real server already supports multiple authenticated keypads; the
+earlier need to switch deployments was a test-provisioning mistake, not a
+single-device server restriction. A new real-TLS integration test exercises two
+clients concurrently, independent events/LED routing, and disconnect/reconnect.
+The shared physical test deployment now retains keypad 2's TLS identity so new
+keypads can join it with separate credentials. Keypad 6 still needs reprovisioning
+to this shared identity when it returns from hardware inspection.
+
+## Keypad 5 debounce test setup
+
+The newly connected board identified as ESP8266EX, MAC `3c:61:05:d0:53:56`,
+with exactly 4 MiB flash. It was serial-installed with the corrected 2,688-byte
+rBoot, fresh slot-A metadata, and production-key `0.0.3-hwtest.1`. Image preflight
+validated both image formats and metadata, and the connected MAC/flash size was
+checked again immediately before writing. Every written region passed esptool's
+hash verification. Application SHA-256:
+
+```text
+b628bd50a28121171264e04c08b0d6ed3824e31650ec7794d1e5361f57b1bec1
+```
+
+The server created a separate `hwtest-keypad5` credential in keypad 2's existing
+test deployment. The serial provisioning tool entered recovery, received an
+acknowledgement, and rebooted keypad 5 with the shared test Wi-Fi/server settings.
+No firmware-signing key was replaced. Keypad 2's credential and TLS pin remain
+valid on the same running server. The full server suite passes all 35 tests,
+including concurrent authenticated clients; physical simultaneous operation and
+keypad 5's debounce behavior still require operator testing.
+
+At 19:32:37 UTC keypad 5 authenticated and registered `0.0.3-hwtest.1` on the
+shared server. The operator was invited to exercise each key once; no physical
+debounce pass is claimed until those events and the operator's completion arrive.

@@ -55,8 +55,9 @@ const runtime = startAll({
   deviceStore: store,
   firmwareRepository: firmware,
 });
-const counts = {};
-let connected = false;
+const devices = new Map();
+for (const id of Object.keys(store.devices))
+  devices.set(id, { connected: false, counts: {} });
 let sequence = [];
 let receiver;
 function record(event) {
@@ -79,27 +80,32 @@ runtime.device.server.on("request", (request, response) => {
     }),
   );
 });
-function colors(label, led1, led2) {
-  if (!connected || receiver?.readyState !== WebSocket.OPEN) {
-    record({ test: "led-skipped", label, reason: "keypad not registered" });
+function colors(label, led1, led2, id = deviceId) {
+  if (!devices.get(id)?.connected || receiver?.readyState !== WebSocket.OPEN) {
+    record({
+      test: "led-skipped",
+      deviceId: id,
+      label,
+      reason: "keypad not registered",
+    });
     return;
   }
   receiver.send(
     JSON.stringify({
       type: "configuration",
-      "controller-id": deviceId,
+      "controller-id": id,
       led1,
       led2,
     }),
   );
-  record({ test: "led-command-sent", label, led1, led2 });
+  record({ test: "led-command-sent", deviceId: id, label, led1, led2 });
 }
 const rgb = (r = 0, g = 0, b = 0) => ({ r, g, b });
 function cancelSequence() {
   sequence.forEach(clearTimeout);
   sequence = [];
 }
-function ledSequence() {
+function ledSequence(id = deviceId) {
   cancelSequence();
   const steps = [
     ["LED 1 red; LED 2 off", rgb(64), rgb()],
@@ -113,7 +119,7 @@ function ledSequence() {
     ["Ready for buttons: both green", rgb(0, 16), rgb(0, 16)],
   ];
   steps.forEach((step, index) => {
-    sequence.push(setTimeout(() => colors(...step), index * 2500));
+    sequence.push(setTimeout(() => colors(...step, id), index * 2500));
   });
 }
 runtime.foundry.server.once("listening", () => {
@@ -132,13 +138,14 @@ runtime.foundry.server.once("listening", () => {
   receiver.on("message", (data) => {
     const message = JSON.parse(data);
     record({ test: "foundry-received", message });
-    if (message["controller-id"] !== deviceId) return;
+    const device = devices.get(message["controller-id"]);
+    if (!device) return;
     if (message.type === "registration") {
-      connected = message.status === "connected";
+      device.connected = message.status === "connected";
     }
     if (message.type === "key-event") {
       const key = `${message.key}:${message.state}`;
-      counts[key] = (counts[key] || 0) + 1;
+      device.counts[key] = (device.counts[key] || 0) + 1;
     }
   });
   receiver.on("error", (error) =>
@@ -150,8 +157,9 @@ function close() {
   if (closing) return;
   closing = true;
   cancelSequence();
-  colors("Test shutdown: both off", rgb(), rgb());
-  record({ test: "summary", connected, counts });
+  for (const id of devices.keys())
+    colors("Test shutdown: both off", rgb(), rgb(), id);
+  record({ test: "summary", devices: Object.fromEntries(devices) });
   setTimeout(() => {
     receiver?.terminate();
     for (const endpoint of [runtime.foundry, runtime.device]) {
@@ -164,26 +172,27 @@ function close() {
   }, 250);
 }
 readline.createInterface({ input: process.stdin }).on("line", (line) => {
-  switch (line.trim()) {
+  const [command, id = deviceId] = line.trim().split(/\s+/);
+  switch (command) {
     case "leds":
-      ledSequence();
+      ledSequence(id);
       break;
     case "off":
       cancelSequence();
-      colors("Both off", rgb(), rgb());
+      colors("Both off", rgb(), rgb(), id);
       break;
     case "status":
-      record({ test: "summary", connected, counts });
+      record({ test: "summary", devices: Object.fromEntries(devices) });
       break;
     case "quit":
       close();
       break;
     default:
-      console.log("Commands: leds, off, status, quit");
+      console.log("Commands: leds [device-id], off [device-id], status, quit");
   }
 });
 process.on("SIGINT", close);
 process.on("SIGTERM", close);
 console.log(
-  "Commands: leds, off, status, quit. LED output needs visual confirmation.",
+  "Commands: leds [device-id], off [device-id], status, quit. LED output needs visual confirmation.",
 );

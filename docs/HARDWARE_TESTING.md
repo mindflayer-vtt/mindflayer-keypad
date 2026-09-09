@@ -22,7 +22,7 @@ keep another network connection available. Run:
 node scripts/hwtest-server.cjs ../mindflayer-server .hwtest/interactive-test 10.42.0.1
 ```
 
-Use a new state directory per test. The server repository must have its dependencies
+Use a new state directory per independent test deployment, not per keypad. The server repository must have its dependencies
 installed and Node.js 24 available. The harness provisions `hwtest-keypad` without
 printing its secret, creates a separate server TLS identity, binds the device listener
 to the supplied hotspot address on port 10443, and binds the Foundry listener only to
@@ -45,7 +45,38 @@ node ../mindflayer-server/scripts/serial-provision.js \
 ```
 
 Use the actual hotspot address if it differs. Wait for the harness to report the
-keypad registration; `status` must show `connected: true`.
+keypad registration; `status` must show `connected: true` for that device under `devices`.
+
+### Multiple keypads
+
+All keypads in one deployment share the same server TLS identity and credential
+store, but each keypad must have a unique device ID and its own authentication
+secret. Keep using the same state directory when adding boards. Starting the harness
+with a new optional device ID creates its credential without printing the secret:
+
+```sh
+node scripts/hwtest-server.cjs ../mindflayer-server \
+  .hwtest/interactive-test 10.42.0.1 hwtest-keypad5
+```
+
+Stop the previous harness before restarting it on these same ports. Generate a
+separate provisioning bundle for the new ID using that shared directory and send
+it only to the intended board. Existing boards retain their provisioning and can
+reconnect concurrently. Do not create a new TLS key per board or share a device
+secret between boards. Moving a board from an independent test deployment requires
+reprovisioning its server public-key pin as well as registering its credential.
+
+The harness accepts every device in its credential store and reports connection
+state and key counts separately. `leds hwtest-keypad5` and `off hwtest-keypad5`
+target that board; omitting the ID uses the startup ID. `quit` sends LEDs off to
+all connected boards. Only one timed LED sequence runs at a time; key events from
+all boards are recorded throughout. Optional OTA targeting applies only to the
+startup ID.
+
+The sibling server's `test/multiple-devices.integration.test.js` verifies two
+simultaneously authenticated TLS clients, independent key identities and LED
+routing, and one client's disconnect/reconnect while the other remains usable.
+This automated check does not replace testing two powered physical boards.
 
 On firmware with the restored status indication, watch the left LED turn red
 before Wi-Fi connects, yellow while Wi-Fi is up but the server is not yet
