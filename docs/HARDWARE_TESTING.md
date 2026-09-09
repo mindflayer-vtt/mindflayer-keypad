@@ -82,8 +82,11 @@ Shift Space
 Check that the receiver logs one `down` and one `up` for every key, with the correct
 device ID. Shift is reported as `SHI`, and Space as `SPC`. Then check a held key and
 Shift plus another key; inspect the event ordering and release events. The 5 ms
-matrix scan is not a hardware debounce guarantee, so report duplicate transitions
-instead of hiding them. `status` prints cumulative per-key transition counts.
+matrix scan now uses a 20 ms stable-input filter for each key's press and release.
+Report any duplicate transitions instead of hiding them; intermittent electrical
+faults lasting longer than the filter interval can still cause events. `status`
+prints cumulative per-key transition counts. Hold test presses comfortably longer
+than 20 ms, since intentionally shorter pulses are filtered out.
 
 The harness saves timestamped events and LED commands in `events.jsonl`. It does not
 automatically mark a test successful. Record operator observations separately and

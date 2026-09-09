@@ -14,6 +14,18 @@ npm run format:check
 
 The Python runner needs a host `g++` with AddressSanitizer and UndefinedBehaviorSanitizer. CI runs these tests after the normal firmware build, using the same patched ArduinoWebsockets sources compiled into that firmware. Missing transport sources fail the test setup rather than skipping coverage.
 
+`test/test_keyboard_matrix.py` compiles the real GPIO scanner against deterministic
+switch and time doubles. Seven scenarios verify all eleven key mappings and the
+unused position, 20 ms press/release debounce, held keys without repeats, short
+glitches, independent keys and modifiers, complete state snapshots before callbacks,
+released row pins during network callbacks, 32-bit timer wraparound, and reset of
+filter state on reinitialization. The scenarios failed against the old scanner.
+Run this suite alone with:
+
+```sh
+python3 -m unittest discover -s test -p test_keyboard_matrix.py
+```
+
 `test/host/application_deadline.cpp` links the real `src/Application.cpp` against simulated SDK time, flash settings, and network I/O. Its six scenarios check unavailable Wi-Fi, provisioning failure, invalid server-key loading, a yielding connection stall, a yielding poll stall, and a permanent boot that must not time out. Temporary scenarios must restart at exactly 90 seconds even when the application has not returned from `setup()` or `poll()`. These tests failed against the original scheduling logic before the fix.
 
 The same host runner checks the restored Shift + Space + E restart shortcut for

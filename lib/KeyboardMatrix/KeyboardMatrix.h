@@ -1,8 +1,15 @@
+#pragma once
+
+#include <stdint.h>
+
 namespace com {
 namespace viromania {
 namespace vtt {
 namespace wss {
 namespace KeyboardMatrix {
+
+constexpr uint32_t SCAN_INTERVAL_MS = 5;
+constexpr uint32_t DEBOUNCE_MS = 20;
 
 struct KeyState {
   KeyState(const char* setKey);

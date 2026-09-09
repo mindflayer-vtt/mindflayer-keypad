@@ -5,6 +5,11 @@
 #include <string>
 
 using String = std::string;
+using byte = uint8_t;
+constexpr int LOW = 0, HIGH = 1, INPUT_PULLUP = 2, OUTPUT = 1;
+void pinMode(uint8_t pin, int mode);
+void digitalWrite(uint8_t pin, int value);
+int digitalRead(uint8_t pin);
 unsigned long millis();
 void delay(unsigned long milliseconds);
 void optimistic_yield(uint32_t);
