@@ -215,4 +215,4 @@ reached the Foundry-facing receiver with matching down/up counts, and the sessio
 remained connected. Per-key pair counts were Q/W/A/D/Z/Shift/Space: 1, S/X: 2,
 C: 4, E: 6. Thus no key was wholly missing during this pass, but repeated
 transitions remain unresolved. The sequence ended with both LEDs commanded dim
-green; physical confirmation of this concurrent sequence is pending.
+green. The operator confirmed the LEDs worked and the button sequence was complete.
