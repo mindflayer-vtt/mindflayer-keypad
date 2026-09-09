@@ -268,3 +268,16 @@ keypad 5's debounce behavior still require operator testing.
 At 19:32:37 UTC keypad 5 authenticated and registered `0.0.3-hwtest.1` on the
 shared server. The operator was invited to exercise each key once; no physical
 debounce pass is claimed until those events and the operator's completion arrive.
+
+### First physical debounce pass
+
+The operator completed all eleven keys at 19:33:11–19:33:16 UTC. Every key
+reached the receiver, with exactly one down/up pair for Q, W, E, A, S, D, Z, X,
+Shift, and Space. C produced two pairs: down/up at 19:33:15.416/.498 and
+19:33:15.522/.592 UTC. These are server receipt timestamps, not raw contact
+measurements. The device remained connected and all reported keys ended released.
+Thus this pass has no missing keys but still has one duplicate pair on C; the
+20 ms filter must not be described as fully resolving physical bounce. An isolated
+C repeat is needed to investigate reproducibility before changing the threshold.
+No pre-debounce baseline was collected on keypad 5, so comparisons against other
+boards cannot quantify the filter's improvement on this particular board.
