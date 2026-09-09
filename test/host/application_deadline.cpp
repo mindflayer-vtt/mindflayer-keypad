@@ -4,6 +4,8 @@
 #include <BootControl.h>
 #include <DebugLog.h>
 #include <KeyboardMatrix.h>
+#include <LedController.h>
+#include <NeoPixelBus.h>
 #include <ProvisioningStorage.h>
 #include <cassert>
 #include <cstdio>
@@ -17,9 +19,16 @@ namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 uint32_t now = 0;
 os_timer_t* sdkTimer = nullptr;
 bool temporary = true, stored = true;
+bool testStatusLeds = false;
+bool recoveryMode = false;
 uint32_t connectDelay = 0, pollDelay = 0;
 ApplicationState state;
 struct Restart {};
+void expectLed(unsigned index, unsigned r, unsigned g, unsigned b) {
+  assert(testLedPixels[index].R == r);
+  assert(testLedPixels[index].G == g);
+  assert(testLedPixels[index].B == b);
+}
 KeyboardMatrix::KeyState matrix[4][3] = {
     {{"Q"}, {"W"}, {"E"}},
     {{"A"}, {"S"}, {"D"}},
@@ -44,6 +53,8 @@ void system_restart() { throw Restart{}; }
 }
 unsigned long millis() { return now; }
 void delay(unsigned long milliseconds) {
+  if (!wifiConnected && testLedBegins)
+    expectLed(0, 255, 0, 0);
   if (sdkTimer && sdkTimer->armed && milliseconds >= uint32_t(sdkTimer->deadline - now)) {
     now = sdkTimer->deadline;
     sdkTimer->armed = false;
@@ -82,13 +93,9 @@ void installSignatureVerifier() {}
 namespace SerialProvisioning {
 void configureSerial() {}
 void clearRecoveryMarker() {}
-bool enterRecoveryModeIfRequested(bool) { return false; }
+bool enterRecoveryModeIfRequested(bool) { return recoveryMode; }
 void poll() {}
 } // namespace SerialProvisioning
-namespace LedController {
-void begin() {}
-void setColors(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t) {}
-} // namespace LedController
 namespace com::viromania::vtt::wss::KeyboardMatrix {
 KeyState::KeyState(const char* name) : isDown(false) {
   std::strncpy(key, name, 3);
@@ -98,7 +105,11 @@ void initMatrix() {}
 KeyState (*getState())[4][3] { return &matrix; }
 } // namespace com::viromania::vtt::wss::KeyboardMatrix
 namespace DeviceConnection {
-void begin() { delay(connectDelay); }
+void begin() {
+  if (testStatusLeds)
+    expectLed(0, 255, 255, 0);
+  delay(connectDelay);
+}
 void poll() { delay(pollDelay); }
 } // namespace DeviceConnection
 namespace RBootTestHooks {
@@ -108,6 +119,62 @@ void maybeFailBeforeServerAcknowledgement(bool, uint32_t) {}
 int main(int argc, char** argv) {
   assert(argc == 2);
   const std::string scenario = argv[1];
+  if (scenario == "status-leds") {
+    temporary = false;
+    testStatusLeds = true;
+    // Recovery/unprovisioned mode must never initialize DMA on serial RX.
+    LedController::showConnectionStatus(false, false);
+    assert(testLedBegins == 0 && testLedShows == 0);
+    stored = false;
+    Application::setup();
+    Application::loop();
+    assert(testLedBegins == 0 && testLedShows == 0);
+    stored = true;
+    recoveryMode = true;
+    Application::setup();
+    Application::loop();
+    assert(testLedBegins == 0 && testLedShows == 0);
+    delete state.serverPublicKey;
+    state.serverPublicKey = nullptr;
+    recoveryMode = false;
+    Application::setup();
+    assert(testLedBegins == 1);
+    assert(testLedShows == 2);
+    assert(testFirstShown[0].R == 255 && testFirstShown[0].G == 0 && testFirstShown[0].B == 0);
+    expectLed(0, 255, 255, 0);
+    expectLed(1, 0, 0, 0);
+    state.wssHealthy = true; // TLS alone must not show green.
+    Application::loop();
+    expectLed(0, 255, 255, 0);
+    state.authenticated = true;
+    Application::loop();
+    expectLed(0, 0, 255, 0);
+    LedController::setColors(10, 20, 30, 40, 50, 60);
+    const unsigned shows = testLedShows;
+    Application::loop();
+    assert(testLedShows == shows); // Do not overwrite server colors each loop.
+    expectLed(0, 10, 20, 30);
+    state.client.connected = false;
+    Application::loop();
+    expectLed(0, 255, 255, 0);
+    expectLed(1, 40, 50, 60);
+    wifiConnected = false;
+    Application::loop();
+    expectLed(0, 255, 0, 0);
+    assert(!state.wifiHealthy);
+    wifiConnected = true;
+    state.authenticated = false;
+    state.client.connected = true;
+    Application::loop();
+    expectLed(0, 255, 255, 0);
+    state.authenticated = true;
+    Application::loop();
+    expectLed(0, 0, 255, 0);
+    expectLed(1, 40, 50, 60);
+    delete state.serverPublicKey;
+    std::puts("connection status LED regression passed");
+    return 0;
+  }
   if (scenario == "restart-shortcut") {
     temporary = false;
     // Exercise the real application loop for every combination of all 12 matrix

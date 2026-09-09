@@ -22,6 +22,15 @@ both modifiers are required; the old Q-based combination and incomplete chords
 must not restart. This regression failed before restoring the handler. It tests
 the application decision, not physical scanning or switch debounce.
 
+The host runner also links the real `LedController.cpp` to a simulated NeoPixel
+output. It checks the first red boot output, yellow before connecting to the
+server, green only after authentication, server/TCP and Wi-Fi loss, reconnection,
+preservation of the right LED, and preservation of server-configured colors while
+connection state is unchanged. Both unprovisioned and serial recovery modes must
+leave the LED driver uninitialized. Existing unavailable-Wi-Fi startup tests also
+assert red while waiting. These checks do not substitute for physical color and
+GPIO3/DMA validation.
+
 `test/test_rboot_bootloader.py` checks the bootloader build guard: the binary must
 fit 4 KiB, contain the transactional patch's safe-default marker, and omit the
 legacy config-writing marker. `build-rboot.sh` runs this guard before copying its

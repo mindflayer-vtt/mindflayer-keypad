@@ -47,6 +47,13 @@ node ../mindflayer-server/scripts/serial-provision.js \
 Use the actual hotspot address if it differs. Wait for the harness to report the
 keypad registration; `status` must show `connected: true`.
 
+On firmware with the restored status indication, watch the left LED turn red
+before Wi-Fi connects, yellow while Wi-Fi is up but the server is not yet
+authenticated, then green. Stages may be brief on a healthy network. Server color
+commands override this indication until the connection state next changes;
+connection-status updates do not change the right LED. Recovery mode intentionally
+leaves the LED driver uninitialized to keep serial RX available.
+
 ## LEDs and keys
 
 Type `leds` into the harness terminal. Every 2.5 seconds it sends a configuration

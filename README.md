@@ -56,6 +56,22 @@ a factory reset. The shortcut uses the normal key scanner; it is not available
 in serial provisioning mode or while startup is waiting for Wi-Fi. The keys are
 also sent to the server as ordinary key events.
 
+## Left LED connection status
+
+On a normally provisioned boot, the left LED shows:
+
+| Color  | State                                       |
+| ------ | ------------------------------------------- |
+| Red    | Booting; Wi-Fi is not connected             |
+| Yellow | Wi-Fi connected; waiting for the server     |
+| Green  | Connected and authenticated with the server |
+
+Loss of the server connection changes it to yellow; loss of Wi-Fi changes it to
+red. Status transitions leave the right LED unchanged. Server configuration can
+set both LEDs, including the left one; those colors remain until the connection
+state changes. Serial provisioning/recovery mode does not initialize the LEDs,
+because their data pin is shared with serial RX.
+
 ## Generic firmware and provisioning
 
 The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [docs/PROVISIONING.md](docs/PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.

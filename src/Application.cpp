@@ -24,6 +24,13 @@ namespace {
 namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 namespace provisioning = mindflayer::provisioning;
 
+void updateConnectionStatus() {
+  ApplicationState& state = applicationState();
+  state.wifiHealthy = WiFi.status() == WL_CONNECTED;
+  LedController::showConnectionStatus(state.wifiHealthy, state.authenticated && state.wssHealthy &&
+                                                             state.client.available());
+}
+
 void handleRestartShortcut() {
   const auto& keys = *KeyboardMatrix::getState();
   // Physical matrix positions: E, Shift, Space. Check the completed scan rather
@@ -94,7 +101,7 @@ void setup() {
   if (SerialProvisioning::enterRecoveryModeIfRequested(state.temporaryBoot))
     return;
   LedController::begin();
-  LedController::setColors(255, 0, 0, 0, 0, 0);
+  LedController::showConnectionStatus(false, false);
   DebugLog::println("NeoPixel DMA active on physical GPIO3/RXD0; serial RX disabled");
   state.provisioned = true;
   WiFi.hostname(state.settings.deviceId);
@@ -104,7 +111,7 @@ void setup() {
     DebugLog::print(".");
     delay(500);
   }
-  state.wifiHealthy = true;
+  updateConnectionStatus();
   DebugLog::printf(" connected: %s; ", WiFi.localIP().toString().c_str());
   printHeapStats();
   KeyboardMatrix::initMatrix();
@@ -125,7 +132,9 @@ void loop() {
     delay(10);
     return;
   }
+  updateConnectionStatus();
   DeviceConnection::poll();
+  updateConnectionStatus();
   handleRestartShortcut();
 #ifdef RBOOT_INTEGRATION
   const uint32_t temporaryElapsed = millis() - state.temporaryStarted;

@@ -21,6 +21,7 @@ class ApplicationDeadlineTest(unittest.TestCase):
             "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
             *(f"-I{path}" for path in includes),
             str(ROOT / "src/Application.cpp"),
+            str(ROOT / "src/LedController.cpp"),
             str(ROOT / "test/host/application_deadline.cpp"), "-o", cls.binary,
         ], check=True)
 
@@ -32,6 +33,9 @@ class ApplicationDeadlineTest(unittest.TestCase):
 
     def test_restart_shortcut_requires_shift_space_e(self):
         subprocess.run([self.binary, "restart-shortcut"], check=True, timeout=5)
+
+    def test_connection_status_leds(self):
+        subprocess.run([self.binary, "status-leds"], check=True, timeout=5)
 
 
 if __name__ == "__main__":

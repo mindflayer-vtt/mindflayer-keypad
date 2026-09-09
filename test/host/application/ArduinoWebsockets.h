@@ -1,4 +1,7 @@
 #pragma once
 namespace websockets {
-struct WebsocketsClient {};
+struct WebsocketsClient {
+  bool connected = true;
+  bool available() { return connected; }
+};
 } // namespace websockets

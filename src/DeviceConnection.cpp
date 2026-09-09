@@ -88,6 +88,7 @@ void processMessage(const uint8_t* data, size_t size) {
     state.client.close(CloseReason_GoingAway);
     state.client = WebsocketsClient();
     state.authenticated = state.wssHealthy = state.registered = false;
+    LedController::showConnectionStatus(WiFi.status() == WL_CONNECTED, false);
     DebugLog::print("WSS released for signed OTA; ");
     printHeapStats();
     FirmwareUpdate::perform(update);
