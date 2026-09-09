@@ -1,5 +1,8 @@
 # Firmware regression tests
 
+For an interactive physical keypad test through the real server and a Foundry-facing
+receiver, see [HARDWARE_TESTING.md](HARDWARE_TESTING.md).
+
 Run the native suites, build the production dependencies, and then run the host regressions:
 
 ```sh
