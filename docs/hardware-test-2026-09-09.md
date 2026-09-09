@@ -196,4 +196,13 @@ its SHA-256 is:
 a762b4d8ac624cfb8ccdcb2a2f2bd26ac75f545e1111f7fc107a4e2a6eb52071
 ```
 
-Physical pulse observation and reprovisioning of this build are pending.
+The owner confirmed the physical pulse works. The unchanged server serial
+provisioning tool then double-reset the pulsing device, reported serial recovery
+mode, received its provisioning acknowledgement, and reset it into normal boot.
+This physically verifies that pulse mode does not prevent entry to serial
+provisioning on the shared GPIO3 pin.
+
+The server observed authenticated registration of `0.0.2-hwtest.1` at 19:12:52
+UTC. The owner confirmed that the red/yellow/green boot LED progression worked.
+Both the unprovisioned pulse and transition back to provisioned operation have
+therefore been checked on physical keypad 2.
