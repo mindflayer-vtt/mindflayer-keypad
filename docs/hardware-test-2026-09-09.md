@@ -281,3 +281,11 @@ Thus this pass has no missing keys but still has one duplicate pair on C; the
 C repeat is needed to investigate reproducibility before changing the threshold.
 No pre-debounce baseline was collected on keypad 5, so comparisons against other
 boards cannot quantify the filter's improvement on this particular board.
+
+The isolated five-press C repeat at 19:34:21–19:34:24 UTC produced exactly five
+additional down/up pairs, with no duplicate transitions or disconnects. C's
+cumulative count rose from two to seven pairs. Observed down-to-up receipt
+intervals were 151–199 ms, so this was a clean repeated-tap test, not verification
+of the requested one-second holds. The earlier duplicate did not recur in this
+sample; it remains an unresolved intermittent observation rather than a fully
+eliminated fault.
