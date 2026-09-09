@@ -24,7 +24,7 @@ You have to have set up the following software in order to compile an flash the 
 
 - Python 3
 - PlatformIO 6.1.19
-- Git, Make, and a host C compiler for building esptool2; OpenSSL for release signing
+- Git, Make, patch, and a host C compiler for building esptool2; OpenSSL for release signing
 
 ## Setup
 

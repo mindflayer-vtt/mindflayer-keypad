@@ -35,7 +35,10 @@ mkdir "$build_dir/rboot" "$build_dir/esptool2"
 # objects from a different compiler. Cached source edits are left untouched.
 git -C "$CACHE_DIR/rboot" archive "$RBOOT_COMMIT" | tar -x -C "$build_dir/rboot"
 git -C "$CACHE_DIR/esptool2" archive "$ESPTOOL2_COMMIT" | tar -x -C "$build_dir/esptool2"
-git -C "$build_dir/rboot" apply "$PROJECT_DIR/scripts/rboot-metadata.patch"
+# This exported tree lives inside the parent keypad Git worktree. git apply
+# would silently skip rboot.c because its patch path is outside that subdirectory.
+# Apply directly to the exported filesystem tree and reject fuzzy matches.
+patch --batch --fuzz=0 -p1 --directory="$build_dir/rboot" < "$PROJECT_DIR/scripts/rboot-metadata.patch"
 make -C "$build_dir/esptool2"
 make -C "$build_dir/rboot" all \
   XTENSA_BINDIR="$TOOLCHAIN_DIR" \
@@ -43,6 +46,7 @@ make -C "$build_dir/rboot" all \
   RBOOT_BIG_FLASH=1 RBOOT_RTC_ENABLED=1 RBOOT_CONFIG_CHKSUM=1 RBOOT_IROM_CHKSUM=1 \
   RBOOT_INTEGRATION=1 RBOOT_EXTRA_INCDIR="$PROJECT_DIR/scripts" \
   SPI_SIZE=4M SPI_MODE=dio SPI_SPEED=40
+python3 "$PROJECT_DIR/scripts/verify-rboot-bootloader.py" "$build_dir/rboot/firmware/rboot.bin"
 cp "$build_dir/rboot/firmware/rboot.bin" "$OUTPUT_DIR/rboot.bin"
 cp "$build_dir/esptool2/esptool2" "$CACHE_DIR/esptool2/esptool2"
 size=$(wc -c < "$OUTPUT_DIR/rboot.bin")
