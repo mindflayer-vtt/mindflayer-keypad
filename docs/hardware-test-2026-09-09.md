@@ -396,3 +396,18 @@ one down/up pair in that pass. Space produced two pairs at 21:40:30.020/.060 and
 released. Thus this board does not yet pass: A/Shift are absent and Space has an
 extra pair despite 30 ms debounce. An isolated repeat is needed before assigning
 the cause to filtering or particular hardware components.
+
+The operator confirmed the LED sequence looked correct and reported three
+additional presses each of A, Shift, and Space. The isolated repeat captured only
+two A pairs (21:41:20.559/.674 and 21:41:22.075/.160 UTC), two Shift pairs
+(21:41:26.226/.301 and 21:41:27.538/.637 UTC), and no additional Space events.
+The cumulative Space count remained two pairs from the preceding pass. All
+received transitions paired correctly and the connection remained active.
+
+LED output therefore passes operator verification, but input remains unreliable:
+A and Shift are not completely dead, yet each missed one of the three reported
+presses, while Space missed all three in this repeat. Recorded down/up intervals
+were 75–115 ms; these receiver timestamps do not establish the physical hold
+duration or raw contact behavior. This is not a clean keypad pass and does not
+isolate whether unstable contacts are being rejected by the 30 ms filter or
+another hardware/input-path problem is responsible.
