@@ -289,3 +289,26 @@ intervals were 151–199 ms, so this was a clean repeated-tap test, not verifica
 of the requested one-second holds. The earlier duplicate did not recur in this
 sample; it remains an unresolved intermittent observation rather than a fully
 eliminated fault.
+
+### 30 ms debounce retry
+
+At the operator's request, the stable-input interval was increased from 20 to
+30 ms for both presses and releases (`bf6d648`). Updated regressions check the
+new boundary and reject 25 ms press/release glitches; six scenarios fail with
+the old 20 ms value, and all seven pass at 30 ms. The full 38-method host suite,
+formatting checks, production signing-key consistency check, and both firmware
+builds passed. Build `0.0.4-hwtest.1` retains the production trust anchor.
+
+Keypad 5's MAC and 4 MiB flash size were rechecked immediately before serial
+installation of the application, corrected bootloader, and initial slot-A
+metadata. Provisioning sectors were not rewritten. Application SHA-256:
+
+```text
+dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc
+```
+
+The shared server was restarted with the same credentials and TLS identity to
+start the retry with fresh per-device event counters.
+All flashed regions passed esptool hash verification. At 19:37:57 UTC keypad 5
+authenticated and registered `0.0.4-hwtest.1`, with its existing provisioning.
+The physical keypress retry is pending operator input.
