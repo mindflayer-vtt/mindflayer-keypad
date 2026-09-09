@@ -98,3 +98,31 @@ The keypad retains the newly installed firmware and test provisioning. It will n
 connect after the hotspot is removed; provision it again for its intended deployment.
 Do not claim the old firmware or provisioning can be recovered when installation
 was explicitly performed without a backup.
+
+## Server-delivered OTA test
+
+Place a signed artifact and its manifest under the test state's `firmware/`
+directory, then restart the harness with an explicit target version:
+
+```sh
+node scripts/hwtest-server.cjs ../mindflayer-server \
+  .hwtest/interactive-test 10.42.0.1 hwtest-keypad 0.0.1-hwtest.1
+```
+
+The harness validates the manifest/artifact through the real server repository
+and selects that target for this test process only. On reconnection, the real
+server offers the update, serves an authorized HTTPS download, and acknowledges
+the registered candidate version. The log records the firmware response status
+and declared byte count, without logging the bearer token. A completed server
+response alone is not proof that the device installed or promoted the image:
+also observe device validation, temporary boot, server acceptance, and a subsequent
+permanent boot via serial diagnostics and fresh server registrations.
+
+The signature must match the public key embedded in the currently running device,
+regardless of where either build was compiled. Never disable verification to run
+this test. A local-key intermediate requires explicit authorization and a serial
+installation. For a temporary local-key test, the locally signed OTA payload can
+contain the production public key, restoring production trust after promotion.
+Such an artifact is test-only and must not be published as a production release;
+it does not validate GitHub's production signing workflow. The temporary source
+key substitution must be reverted and never committed.

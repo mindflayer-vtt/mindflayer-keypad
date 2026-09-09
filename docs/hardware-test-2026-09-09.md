@@ -121,3 +121,52 @@ to distinguish contact behavior from scanning/electrical timing; the lack of
 debounce alone does not establish the cause of missing events. No firmware changes
 or soldering have been performed to address these findings. Test services and the
 hotspot remain running for further investigation.
+
+## Restart shortcut and Wi-Fi OTA
+
+Commit `5a19e7d` restores Shift + Space + E and adds an exhaustive application-loop
+regression. The operator authorized a temporary serial-installed local-key build
+because the production private key was not locally available. Its version is
+`0.0.0-localkey`. The OTA payload is `0.0.1-hwtest.1`, signed with the local key but
+containing the production public key. The temporary source-key substitution was
+reverted without committing it. No signature verification was disabled.
+
+The first OTA attempt served 437,300 bytes over the authorized HTTPS endpoint.
+The device validated the signed image, booted slot B temporarily, authenticated,
+and received server acceptance. On the promotion restart, however, rBoot printed
+`Writing default boot config.` and booted the old slot A. Update offers were
+stopped while investigating; this attempt did not pass promotion.
+
+The cause was the rBoot build script's `git apply` command inside an exported
+source subdirectory of the keypad repository. Git silently skipped `rboot.c`,
+leaving a legacy bootloader that did not understand transactional metadata.
+The reproduction reported `Skipped patch 'rboot.c'.` with success status. The
+build now applies the patch with `patch --batch --fuzz=0` directly to the exported
+tree and checks the final binary before copying it. A new regression guard rejects
+the missing safe-default marker and any legacy config-writing marker.
+
+The corrected bootloader is 2,688 bytes, SHA-256:
+
+```text
+a6838d9fdb2afc2f31690342e7f839915f7e0f7fbed7eef7ce0c4cf7c0011ee3
+```
+
+It was serial-installed on keypad 2 with fresh slot-A boot metadata, without
+rewriting the intermediate application or provisioning. A retry uses the exact
+same signed OTA payload. At 18:58:43 UTC the server completed the 437,300-byte
+response. The device validated slot B, booted it temporarily, received server
+acceptance, and rebooted with `slot=B permanent=B mode=PERMANENT`. It authenticated
+again at 18:58:56 UTC as `0.0.1-hwtest.1`, still loading provisioning copy A,
+generation 1. Thus Wi-Fi download and permanent promotion passed on retry; no
+serial application write occurred between the intermediate and that OTA boot.
+The active firmware contains the production public key again. The inactive slot
+still contains the local-key intermediate; it has not been erased.
+
+Physical shortcut testing is pending. Keypad 6 still has the earlier bootloader
+until explicitly reflashed. Future OTA on the active keypad-2 firmware again
+requires production-key signing; this local-key test does not validate GitHub
+release signing or establish a general key-rotation mechanism.
+
+Separately, the owner found the ESP module on keypad 6 was not fully seated.
+This is a plausible hardware contributor, not yet confirmed by a post-reseating
+test. It does not remove the firmware's missing debounce behavior.

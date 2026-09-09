@@ -4,11 +4,16 @@ const fs = require("node:fs");
 const path = require("node:path");
 const readline = require("node:readline");
 
-const [serverPath, statePath, deviceHost, deviceId = "hwtest-keypad"] =
-  process.argv.slice(2);
+const [
+  serverPath,
+  statePath,
+  deviceHost,
+  deviceId = "hwtest-keypad",
+  targetVersion,
+] = process.argv.slice(2);
 if (!serverPath || !statePath || !deviceHost) {
   console.error(
-    "Usage: node scripts/hwtest-server.cjs SERVER_REPO STATE_DIR DEVICE_HOST [DEVICE_ID]",
+    "Usage: node scripts/hwtest-server.cjs SERVER_REPO STATE_DIR DEVICE_HOST [DEVICE_ID] [TARGET_VERSION]",
   );
   process.exit(2);
 }
@@ -24,6 +29,22 @@ const store = new DeviceStore(
   path.join(process.env.MINDFLAYER_DATA_DIR, "devices.json"),
 );
 if (!store.get(deviceId)) store.provision(deviceId);
+const { FirmwareRepository, VERSION } = require(
+  path.join(serverRepo, "src/firmware/repository"),
+);
+const firmware = new FirmwareRepository(process.env.MINDFLAYER_FIRMWARE_DIR);
+if (targetVersion) {
+  if (
+    !VERSION.test(targetVersion) ||
+    !firmware.get("mindflayer-keypad-v1", targetVersion)
+  ) {
+    throw new Error(
+      "Target version must have a valid artifact in the test firmware repository",
+    );
+  }
+  // Test-only rollout selection; do not change persistent deployment settings.
+  store.get(deviceId).targetVersion = targetVersion;
+}
 const { startAll } = require(path.join(serverRepo, "src/index"));
 const WebSocket = require(path.join(serverRepo, "node_modules/ws"));
 const runtime = startAll({
@@ -31,6 +52,8 @@ const runtime = startAll({
   deviceHost,
   foundryPort: 8080,
   devicePort: 10443,
+  deviceStore: store,
+  firmwareRepository: firmware,
 });
 const counts = {};
 let connected = false;
@@ -44,6 +67,18 @@ function record(event) {
   });
   console.log(line);
 }
+if (targetVersion) record({ test: "ota-target", deviceId, targetVersion });
+runtime.device.server.on("request", (request, response) => {
+  if (!request.url.startsWith("/firmware/")) return;
+  response.once("finish", () =>
+    record({
+      test: "firmware-response",
+      path: request.url.split("?")[0],
+      status: response.statusCode,
+      bytes: response.getHeader("Content-Length"),
+    }),
+  );
+});
 function colors(label, led1, led2) {
   if (!connected || receiver?.readyState !== WebSocket.OPEN) {
     record({ test: "led-skipped", label, reason: "keypad not registered" });
