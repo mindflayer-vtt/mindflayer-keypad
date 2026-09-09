@@ -312,3 +312,11 @@ start the retry with fresh per-device event counters.
 All flashed regions passed esptool hash verification. At 19:37:57 UTC keypad 5
 authenticated and registered `0.0.4-hwtest.1`, with its existing provisioning.
 The physical keypress retry is pending operator input.
+
+At 19:45:26–19:45:31 UTC, the completed full-key pass produced exactly one
+down/up pair for each of all eleven keys, including C. There were no duplicate
+transitions, missing keys in that pass, or observed disconnects. All keys ended
+released. This is a clean full-key pass on keypad 5 with 30 ms debounce, not a
+guarantee against every intermittent contact fault. The five additional requested
+C presses were not present in the received log as of 19:45:42 UTC; that isolated
+repeat remains unverified.
