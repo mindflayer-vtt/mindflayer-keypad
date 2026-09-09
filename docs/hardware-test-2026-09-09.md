@@ -162,11 +162,38 @@ serial application write occurred between the intermediate and that OTA boot.
 The active firmware contains the production public key again. The inactive slot
 still contains the local-key intermediate; it has not been erased.
 
-Physical shortcut testing is pending. Keypad 6 still has the earlier bootloader
-until explicitly reflashed. Future OTA on the active keypad-2 firmware again
+Physical shortcut testing subsequently passed: the serial monitor captured
+`Shift+Space+E: restarting`, followed by another permanent slot-B boot of
+`0.0.1-hwtest.1` and successful authentication with the same provisioning.
+Keypad 6 still has the earlier bootloader until explicitly reflashed. Future OTA
+on the active keypad-2 firmware again
 requires production-key signing; this local-key test does not validate GitHub
 release signing or establish a general key-rotation mechanism.
 
 Separately, the owner found the ESP module on keypad 6 was not fully seated.
 This is a plausible hardware contributor, not yet confirmed by a post-reseating
 test. It does not remove the firmware's missing debounce behavior.
+
+## Connection colors and unprovisioned pulse
+
+The next build, `0.0.2-hwtest.1`, restores left-LED red before Wi-Fi, yellow once
+Wi-Fi connects, and green after server authentication. An unprovisioned normal
+boot pulses both LEDs red every three seconds (one-second fade, two seconds dark).
+Serial recovery is selected by the existing host double reset before DMA starts;
+the pulse path never polls UART while DMA owns GPIO3. Host regressions verify
+three pulse cycles, status transitions, preservation of server colors/right LED,
+and separate recovery behavior with and without stored settings. All 37 host
+tests passed and both firmware layouts compiled.
+
+For the owner-requested unprovisioned test, keypad 2 was serial-flashed with
+the corrected bootloader, slot-A metadata/application, and erased provisioning
+sectors at `0x3f9000` and `0x3fa000`. Every written region passed esptool's hash
+verification, and the device was reset. The test bundle remains available on the host
+for later reprovisioning. The new application retains the production trust anchor;
+its SHA-256 is:
+
+```text
+a762b4d8ac624cfb8ccdcb2a2f2bd26ac75f545e1111f7fc107a4e2a6eb52071
+```
+
+Physical pulse observation and reprovisioning of this build are pending.
