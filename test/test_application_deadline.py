@@ -37,6 +37,9 @@ class ApplicationDeadlineTest(unittest.TestCase):
     def test_connection_status_leds(self):
         subprocess.run([self.binary, "status-leds"], check=True, timeout=5)
 
+    def test_unprovisioned_red_pulse_every_three_seconds(self):
+        subprocess.run([self.binary, "unprovisioned-pulse"], check=True, timeout=5)
+
 
 if __name__ == "__main__":
     unittest.main()

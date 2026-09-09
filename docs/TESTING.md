@@ -26,8 +26,12 @@ The host runner also links the real `LedController.cpp` to a simulated NeoPixel
 output. It checks the first red boot output, yellow before connecting to the
 server, green only after authentication, server/TCP and Wi-Fi loss, reconnection,
 preservation of the right LED, and preservation of server-configured colors while
-connection state is unchanged. Both unprovisioned and serial recovery modes must
-leave the LED driver uninitialized. Existing unavailable-Wi-Fi startup tests also
+connection state is unchanged. Serial recovery must leave the LED driver
+uninitialized, both with and without stored provisioning. A separate scenario
+checks three unprovisioned pulse cycles: both LEDs fade red in/out over one second
+and remain dark for two seconds, with a three-second period. It also checks that
+the animation path never polls serial provisioning or starts Wi-Fi/the server.
+Existing unavailable-Wi-Fi startup tests also
 assert red while waiting. These checks do not substitute for physical color and
 GPIO3/DMA validation.
 

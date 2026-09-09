@@ -24,6 +24,18 @@ namespace {
 namespace KeyboardMatrix = com::viromania::vtt::wss::KeyboardMatrix;
 namespace provisioning = mindflayer::provisioning;
 
+void enterUnprovisionedMode() {
+  ApplicationState& state = applicationState();
+  // The sender already double-resets every device. Honor that recovery window
+  // even without settings, before DMA can claim the shared GPIO3 serial RX pin.
+  state.serialProvisioningMode =
+      SerialProvisioning::enterRecoveryModeIfRequested(state.temporaryBoot);
+  if (!state.serialProvisioningMode) {
+    LedController::begin();
+    LedController::showUnprovisioned(millis());
+  }
+}
+
 void updateConnectionStatus() {
   ApplicationState& state = applicationState();
   state.wifiHealthy = WiFi.status() == WL_CONNECTED;
@@ -74,7 +86,7 @@ void setup() {
 #endif
   provisioning::Selection selected;
   if (!provisioning::loadStored(state.settings, &selected)) {
-    SerialProvisioning::clearRecoveryMarker();
+    enterUnprovisionedMode();
     return;
   }
   DebugLog::setEnabled(state.settings.serialDebug);
@@ -96,9 +108,14 @@ void setup() {
       new BearSSL::PublicKey(state.settings.serverPublicKey, state.settings.serverPublicKeyLength);
   if (!state.serverPublicKey->isRSA() && !state.serverPublicKey->isEC()) {
     DebugLog::println("UNPROVISIONED; invalid server public key");
+    delete state.serverPublicKey;
+    state.serverPublicKey = nullptr;
+    enterUnprovisionedMode();
     return;
   }
-  if (SerialProvisioning::enterRecoveryModeIfRequested(state.temporaryBoot))
+  state.serialProvisioningMode =
+      SerialProvisioning::enterRecoveryModeIfRequested(state.temporaryBoot);
+  if (state.serialProvisioningMode)
     return;
   LedController::begin();
   LedController::showConnectionStatus(false, false);
@@ -128,7 +145,10 @@ void loop() {
   }
 #endif
   if (!state.provisioned) {
-    SerialProvisioning::poll();
+    if (state.serialProvisioningMode)
+      SerialProvisioning::poll();
+    else
+      LedController::showUnprovisioned(millis());
     delay(10);
     return;
   }

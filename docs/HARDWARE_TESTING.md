@@ -54,6 +54,13 @@ commands override this indication until the connection state next changes;
 connection-status updates do not change the right LED. Recovery mode intentionally
 leaves the LED driver uninitialized to keep serial RX available.
 
+On an unprovisioned normal boot, verify that both LEDs pulse red together once
+every three seconds (one second fading in/out, two seconds dark). Then use the
+normal serial provisioning command; its double reset must enter serial recovery,
+stop the animation, acknowledge provisioning, and reboot into the normal
+red/yellow/green connection sequence. Do not erase a provisioned device merely
+to run this check without the owner's explicit approval.
+
 ## LEDs and keys
 
 Type `leds` into the harness terminal. Every 2.5 seconds it sends a configuration

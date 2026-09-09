@@ -3,9 +3,10 @@
 
 extern bool wifiConnected, publicKeyValid;
 constexpr int WL_CONNECTED = 3;
+inline unsigned testWifiBegins = 0;
 struct FakeWifi {
   void hostname(const char*) {}
-  void begin(const char*, const char*) {}
+  void begin(const char*, const char*) { ++testWifiBegins; }
   int status() { return wifiConnected ? WL_CONNECTED : 0; }
   struct Address {
     String toString() { return "192.0.2.1"; }

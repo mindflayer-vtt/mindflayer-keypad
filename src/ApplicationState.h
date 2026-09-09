@@ -10,6 +10,7 @@ struct ApplicationState {
   websockets::WebsocketsClient client;
   BearSSL::PublicKey* serverPublicKey = nullptr;
   bool provisioned = false;
+  bool serialProvisioningMode = false;
   bool authenticated = false;
   bool wifiHealthy = false;
   bool wssHealthy = false;

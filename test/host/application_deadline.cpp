@@ -21,6 +21,7 @@ os_timer_t* sdkTimer = nullptr;
 bool temporary = true, stored = true;
 bool testStatusLeds = false;
 bool recoveryMode = false;
+unsigned recoveryChecks = 0, serialPolls = 0, deviceBegins = 0;
 uint32_t connectDelay = 0, pollDelay = 0;
 ApplicationState state;
 struct Restart {};
@@ -93,8 +94,11 @@ void installSignatureVerifier() {}
 namespace SerialProvisioning {
 void configureSerial() {}
 void clearRecoveryMarker() {}
-bool enterRecoveryModeIfRequested(bool) { return recoveryMode; }
-void poll() {}
+bool enterRecoveryModeIfRequested(bool isTemporary) {
+  ++recoveryChecks;
+  return recoveryMode && !isTemporary;
+}
+void poll() { ++serialPolls; }
 } // namespace SerialProvisioning
 namespace com::viromania::vtt::wss::KeyboardMatrix {
 KeyState::KeyState(const char* name) : isDown(false) {
@@ -106,6 +110,7 @@ KeyState (*getState())[4][3] { return &matrix; }
 } // namespace com::viromania::vtt::wss::KeyboardMatrix
 namespace DeviceConnection {
 void begin() {
+  ++deviceBegins;
   if (testStatusLeds)
     expectLed(0, 255, 255, 0);
   delay(connectDelay);
@@ -119,21 +124,47 @@ void maybeFailBeforeServerAcknowledgement(bool, uint32_t) {}
 int main(int argc, char** argv) {
   assert(argc == 2);
   const std::string scenario = argv[1];
+  if (scenario == "unprovisioned-pulse") {
+    temporary = stored = false;
+    Application::setup();
+    assert(!state.provisioned && !state.serialProvisioningMode);
+    assert(recoveryChecks == 1 && testLedBegins == 1);
+    const uint32_t started = now;
+    // Three complete cycles: rise for 500 ms, fall for 500 ms, dark for 2 s.
+    for (uint32_t cycle = 0; cycle < 3; ++cycle) {
+      for (uint32_t phase : {0u, 250u, 500u, 750u, 1000u, 2000u, 2990u}) {
+        now = started + cycle * 3000 + phase;
+        Application::loop();
+        const unsigned red = phase == 500 ? 255 : (phase == 250 || phase == 750) ? 127 : 0;
+        expectLed(0, red, 0, 0);
+        expectLed(1, red, 0, 0);
+      }
+    }
+    const unsigned shows = testLedShows;
+    Application::loop();
+    assert(testLedShows == shows); // Do not retransmit an unchanged dark frame.
+    assert(serialPolls == 0 && testWifiBegins == 0 && deviceBegins == 0);
+    std::puts("unprovisioned pulse regression passed");
+    return 0;
+  }
   if (scenario == "status-leds") {
     temporary = false;
     testStatusLeds = true;
-    // Recovery/unprovisioned mode must never initialize DMA on serial RX.
+    // Serial recovery must not initialize DMA, with or without stored settings.
     LedController::showConnectionStatus(false, false);
     assert(testLedBegins == 0 && testLedShows == 0);
     stored = false;
+    recoveryMode = true;
     Application::setup();
     Application::loop();
     assert(testLedBegins == 0 && testLedShows == 0);
+    assert(state.serialProvisioningMode && serialPolls == 1);
     stored = true;
     recoveryMode = true;
     Application::setup();
     Application::loop();
     assert(testLedBegins == 0 && testLedShows == 0);
+    assert(state.serialProvisioningMode && serialPolls == 2);
     delete state.serverPublicKey;
     state.serverPublicKey = nullptr;
     recoveryMode = false;

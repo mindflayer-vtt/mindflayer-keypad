@@ -69,14 +69,19 @@ On a normally provisioned boot, the left LED shows:
 Loss of the server connection changes it to yellow; loss of Wi-Fi changes it to
 red. Status transitions leave the right LED unchanged. Server configuration can
 set both LEDs, including the left one; those colors remain until the connection
-state changes. Serial provisioning/recovery mode does not initialize the LEDs,
-because their data pin is shared with serial RX.
+state changes.
+
+An unprovisioned keypad pulses **both LEDs red once every three seconds**: a
+one-second fade in/out, then two seconds dark. The pulse starts after the
+double-reset recovery window. Serial provisioning/recovery mode disables the
+animation and does not initialize the LED driver, because its data pin is shared
+with serial RX. The provisioning tool selects that mode automatically.
 
 ## Generic firmware and provisioning
 
 The production build is generic: it does not read `config.h` or any installation-specific build input. Device ID, HMAC secret, Wi-Fi settings, direct-server address/port, and pinned server DER/SPKI public key are installed afterward through the serial CBOR provisioning workflow in [docs/PROVISIONING.md](docs/PROVISIONING.md). Two redundant raw 4 KiB flash sectors preserve provisioning across ordinary signed OTA; no filesystem is used.
 
-Existing hardware wires NeoPixel data to GPIO3/RXD0. Provisioned operation uses the ESP8266 DMA backend on that physical pin, so UART RX is intentionally available only in the special unprovisioned/double-reset recovery mode documented in [docs/PROVISIONING.md](docs/PROVISIONING.md). The host provisioning tool enters that mode automatically through two FTDI RTS reset pulses.
+Existing hardware wires NeoPixel data to GPIO3/RXD0. Normal operation, including the unprovisioned pulse, uses the ESP8266 DMA backend on that physical pin, so UART RX is intentionally available only in the double-reset serial recovery mode documented in [docs/PROVISIONING.md](docs/PROVISIONING.md). The host provisioning tool enters that mode automatically through two FTDI RTS reset pulses, whether or not the device has stored provisioning.
 
 ## Initial rBoot installation
 
