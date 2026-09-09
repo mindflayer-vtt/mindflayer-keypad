@@ -320,3 +320,27 @@ released. This is a clean full-key pass on keypad 5 with 30 ms debounce, not a
 guarantee against every intermittent contact fault. The five additional requested
 C presses were not present in the received log as of 19:45:42 UTC; that isolated
 repeat remains unverified.
+
+## Keypad 6 after reflow
+
+The operator reported reflowing keypad 6 and reconnecting it. The USB-connected
+ESP identified with the same MAC `8c:aa:b5:7a:d3:05` and 4 MiB flash. Firmware
+was deliberately left unchanged for the initial post-reflow comparison.
+
+A separate `hwtest-keypad6` credential was created in the shared test deployment
+alongside keypad 2 and 5. This replaces keypad 6's former `hwtest-keypad` identity
+when provisioned; the other boards' credentials and shared TLS identity were
+retained. The standard fixed-delay double-reset provisioning attempt timed out.
+Boot diagnostics still showed `0.0.0-dev`, permanent slot A, original provisioning
+copy A generation 1, and pinned WSS failures against the new server identity.
+
+A retry waited for the actual `Double-reset recovery window open` diagnostic
+before issuing the second reset, then waited for `SERIAL PROVISIONING MODE`
+before sending the validated bundle. This received `PROVISIONING OK`. Only
+provisioning was updated; keypad 6 still has its earlier firmware without debounce
+and its earlier bootloader. The fixed-delay failure is recorded as a provisioning
+timing observation, not evidence that the reflow failed or a firmware fix was
+installed. Post-reflow key behavior remains to be checked after authentication.
+
+At 19:49:57 UTC keypad 6 authenticated on the shared server as `hwtest-keypad6`
+and registered `0.0.0-dev`. The receiver is ready for a post-reflow full-key pass.
