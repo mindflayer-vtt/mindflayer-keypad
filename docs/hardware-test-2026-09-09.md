@@ -352,3 +352,32 @@ remained active and all reported keys ended released. Reflow therefore did not
 restore X/C in this test. Firmware remains the original non-debounced build, so
 the 30 ms filter cannot explain their absence. These observations do not identify
 whether the remaining physical fault is in a switch, connection, or PCB trace.
+
+## Keypad 1 test setup
+
+The next attached board identified as ESP8266EX, MAC `3c:61:05:d0:7d:b3`, with
+4 MiB flash. The existing `0.0.4-hwtest.1` artifact was reused after validating
+its image format, metadata, production trust anchor, corrected bootloader marker,
+and SHA-256 against the previously tested keypad 5 build:
+
+```text
+dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc
+```
+
+The MAC and flash capacity were checked again immediately before installation.
+The shared server was no longer running when this test began; its ports were
+confirmed free and the hotspot remained active at `10.42.0.1`. It was restarted
+with the same TLS identity and existing credentials, adding a separate
+`hwtest-keypad1` credential and generating a private provisioning bundle for
+this board. No firmware-signing keys were changed.
+
+Serial installation wrote the corrected bootloader, initial slot-A metadata,
+and application without a whole-chip erase. All written regions passed esptool's
+hash verification. The normal server provisioning tool then entered serial
+recovery, received acknowledgement, and rebooted keypad 1 with its new settings.
+
+At 21:39:39 UTC keypad 1 authenticated as `hwtest-keypad1` and registered
+`0.0.4-hwtest.1`. The receiver began the targeted LED sequence, and the operator
+was asked to exercise all eleven keys after both LEDs reach dim green. Physical
+LED confirmation and keypress results are pending; successful command transmission
+alone is not counted as a hardware pass.
