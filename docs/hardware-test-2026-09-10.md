@@ -330,3 +330,10 @@ All written regions passed esptool hash verification. At 02:15:56 UTC keypad 2
 authenticated and registered `0.0.4-hwtest.1` using its retained provisioning.
 The targeted LED sequence and full-key exercise were requested; operator LED
 confirmation and the new key-test results remain pending.
+
+A late disconnect notification at 02:16:03 UTC marked keypad 2 disconnected
+after its new registration, and the harness skipped the first LED commands.
+The shared test server was restarted with unchanged credentials and TLS identity
+to clear the stale session state. Keypad 2 authenticated again at 02:16:34 UTC;
+the LED sequence was restarted with fresh key counters. No further firmware or
+provisioning write was made.
