@@ -202,3 +202,15 @@ authenticated and registered `0.0.4-hwtest.1` after the reflash, retaining its
 existing provisioning. The targeted LED sequence was started and the operator
 was invited to perform a full-key pass after both LEDs reach dim green. Physical
 LED confirmation and the new key-test results remain pending.
+
+The first new key exercise at 01:35:39–01:35:44 UTC captured one pair each for
+Q/W/E/A/S/D/Z/X/C, followed by Shift-down without its release and no Space events.
+A new registration followed at 01:35:53; a disconnect notification then arrived
+at 01:35:59, leaving the harness's connection flag false. This pass is incomplete,
+and neither the reconnect cause nor a physical LED pass was established.
+
+On the operator's request to repeat, the harness initially skipped LED commands
+because of that connection flag. The test server was restarted with unchanged
+TLS identity and credentials to clear session state and event counters. Keypad 5
+authenticated again at 01:36:31 UTC; a fresh targeted LED sequence was started.
+No firmware or provisioning change was made for this repeat.
