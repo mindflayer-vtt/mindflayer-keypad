@@ -296,3 +296,18 @@ At 02:08:06 UTC the replacement authenticated with the shared server as
 `hwtest-keypad1` and registered firmware `0.0.4-hwtest.1`. Firmware installation,
 provisioning, and initial server connectivity are verified. LEDs, key inputs,
 and sustained USB/power stability have not yet been retested on this replacement.
+
+### Replacement ESP LED and full-key result
+
+The targeted LED sequence ran at 02:09:15–02:09:35 UTC, and the operator confirmed
+the LEDs were correct. The key exercise at 02:09:36–02:09:42 UTC produced exactly
+one down/up pair for each of Q, W, E, A, S, D, Z, X, C, Shift, and Space, in
+order. There were no missing keys or duplicate transitions, and all keys ended
+released. The server's cumulative counters included one earlier pair per key
+from the removed ESP; this result uses only the replacement's timestamped events
+and the increment over the pre-test baseline.
+
+No disconnect or fresh registration occurred during this exercise or through the
+02:09:59 UTC status check, which still reported keypad 1 connected. The replacement
+passes this LED and single-key test with 30 ms debounce. Sustained USB/power
+stability and cable-movement testing remain unverified.
