@@ -75,3 +75,15 @@ LOW margin. Bypassing one identified column series resistor is a proposed
 controlled experiment with power disconnected during soldering and the switch
 diodes retained; it has not yet been performed or validated. Lower series
 resistance retains more fault-current limiting than a direct bridge.
+
+## Keypad 6 column-resistor bridges
+
+The operator reported that fitting replacement resistors would require extensive
+disassembly, bridged all three column series resistors on keypad 6, and reconnected
+the board. This is an operator-performed modification, not a change to the
+checked-in schematic or confirmation of a validated fix. Post-modification
+voltages and normal-scanner behavior remain to be measured. The static-row
+diagnostic remains installed; production firmware has not yet been restored.
+Serial observation after reconnection confirmed the diagnostic loop remains
+active, reporting all three column inputs HIGH during that observation. No
+firmware write or reset was performed for this check.
