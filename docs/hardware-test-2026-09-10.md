@@ -225,3 +225,26 @@ missing keys, or observed disconnects during this repeat. Keypad 5 passes this
 LED and single-key exercise on `0.0.4-hwtest.1`. The earlier incomplete pass and
 reconnection remain separate observations; this success does not explain their
 cause or establish long-duration reliability.
+
+## Keypad 1 repeat setup
+
+The operator reconnected keypad 1 and requested flashing and testing. It
+authenticated as `hwtest-keypad1` running `0.0.4-hwtest.1` before reinstallation,
+confirming retained provisioning works. USB identification matched its known
+MAC `3c:61:05:d0:7d:b3` and exact 4 MiB capacity. Both were checked again
+immediately before the requested reflash.
+
+The application remains the verified 30 ms debounce build, SHA-256
+`dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc`.
+Application/metadata preflight, the production signing-key check, and corrected
+bootloader marker passed. Corrected rBoot and initial slot-A metadata accompany
+the application; provisioning sectors are outside the write regions. The test
+server was restarted with the same TLS identity and credentials for a fresh
+session. The prior USB/power concern and missed A/Shift/Space presses are not
+considered resolved until new evidence establishes their status; exact physical
+modifications on this board have not been explicitly confirmed.
+
+All flashed regions passed esptool hash verification. At 01:46:19 UTC keypad 1
+authenticated and registered `0.0.4-hwtest.1` using its retained provisioning.
+The targeted LED sequence was started, with a full-key pass requested afterward.
+Physical LED confirmation and the repeat's key results remain pending.
