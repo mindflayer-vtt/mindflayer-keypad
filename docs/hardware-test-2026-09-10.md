@@ -337,3 +337,19 @@ The shared test server was restarted with unchanged credentials and TLS identity
 to clear the stale session state. Keypad 2 authenticated again at 02:16:34 UTC;
 the LED sequence was restarted with fresh key counters. No further firmware or
 provisioning write was made.
+
+### Keypad 2 completed LED and full-key test
+
+The LED sequence ran at 02:16:47–02:17:07 UTC, and the operator confirmed it was
+correct. The key pass at 02:17:47–02:17:52 UTC produced exactly one down/up pair
+for all eleven keys in order: Q, W, E, A, S, D, Z, X, C, Shift, Space. There
+were no missing keys or duplicate transitions, and every key ended released.
+No disconnect or fresh registration occurred after the controlled server restart
+through the 02:18:12 UTC status check, which still reported keypad 2 connected.
+
+Keypads 1 (replacement ESP), 2, 4, 5, and 6 now all have the same
+`0.0.4-hwtest.1` firmware with 30 ms debounce and clean individual full-key tests.
+All five are provisioned for the shared server, but simultaneous operation of all
+five physical devices and long-duration stability remain unverified. The earlier
+late-disconnect/session-state issue is not considered fixed by restarting the
+test server.
