@@ -311,3 +311,22 @@ No disconnect or fresh registration occurred during this exercise or through the
 02:09:59 UTC status check, which still reported keypad 1 connected. The replacement
 passes this LED and single-key test with 30 ms debounce. Sustained USB/power
 stability and cable-movement testing remain unverified.
+
+## Keypad 2 debounce update and retest setup
+
+The operator connected keypad 2 for flashing and testing. At 02:14:39 UTC it
+authenticated with the shared server on its previous `0.0.2-hwtest.1` firmware.
+USB probing confirmed its known MAC `3c:61:05:d0:a0:2d`, ESP8266EX, and exactly
+4 MiB flash before writing.
+
+The selected update is the same production-key `0.0.4-hwtest.1` application with
+30 ms debounce tested on keypads 1, 4, 5, and 6. Application SHA-256 is
+`dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc`.
+Application/metadata preflight, signing-anchor verification, and the corrected
+rBoot marker check passed. The write installs corrected rBoot, initial slot-A
+metadata, and the application without touching the provisioning sectors.
+
+All written regions passed esptool hash verification. At 02:15:56 UTC keypad 2
+authenticated and registered `0.0.4-hwtest.1` using its retained provisioning.
+The targeted LED sequence and full-key exercise were requested; operator LED
+confirmation and the new key-test results remain pending.
