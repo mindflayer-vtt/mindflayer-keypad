@@ -264,3 +264,35 @@ that late notification alone does not establish whether a newer socket is still
 usable. The LED and key exercise passes, but connection/power stability is not
 established. Whether the operator moved/reset the board after the key pass, and
 the reason for the new registration, remain unconfirmed.
+
+## Keypad 1 replacement ESP
+
+The operator attributed ongoing USB trouble to keypad 1's ESP subboard and
+replaced it. The replacement identifies as ESP8266EX with MAC
+`3c:61:05:cf:d1:54` and exactly 4 MiB flash, distinct from the removed module's
+`3c:61:05:d0:7d:b3`. The replacement's identity/capacity were checked again
+immediately before the requested flash.
+
+The verified production-key `0.0.4-hwtest.1` application with 30 ms debounce,
+corrected rBoot, and initial slot-A metadata were selected after preflight.
+Application SHA-256 remains
+`dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc`.
+A fresh bundle was generated from the shared deployment's existing
+`hwtest-keypad1` credential and TLS identity. The removed module has not been
+erased or had its credential revoked; it must remain offline or be reprovisioned
+under a distinct identity before reuse alongside the replacement.
+
+Serial installation completed with matching esptool hashes for all written
+regions. No whole-chip erase was performed; provisioning is applied separately
+through the normal validated serial provisioning tool.
+
+The standard fixed-delay provisioning attempt timed out without acknowledgement.
+A retry increased the interval between reset pulses from 0.5 to 1.0 seconds,
+waited for the explicit serial recovery banner before sending the previously
+validated bundle, and received `PROVISIONING OK`. This is another fixed-delay
+transport timing observation; no firmware change was needed for the retry.
+
+At 02:08:06 UTC the replacement authenticated with the shared server as
+`hwtest-keypad1` and registered firmware `0.0.4-hwtest.1`. Firmware installation,
+provisioning, and initial server connectivity are verified. LEDs, key inputs,
+and sustained USB/power stability have not yet been retested on this replacement.
