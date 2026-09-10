@@ -1,5 +1,8 @@
 # Mind Flayer Provisioning Format v2
 
+For the end-to-end USB installation and provisioning procedure, start with
+[Initial keypad setup](initial-keypad-setup.md).
+
 One generic signed firmware contains hardware definitions, QCBOR, the device protocol, and the firmware-signing public key. Installation data is supplied later over trusted serial and stored in two dedicated raw flash sectors. No filesystem, device ID, HMAC secret, Wi-Fi credential, server address, or server TLS key participates in compiling or signing `firmware.bin`.
 
 ## Serial request envelope

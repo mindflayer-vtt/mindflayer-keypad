@@ -28,6 +28,10 @@ You have to have set up the following software in order to compile an flash the 
 
 ## Setup
 
+For a complete new-device walkthrough, see
+[Initial keypad setup over USB](docs/initial-keypad-setup.md), covering firmware
+installation, server registration, Wi-Fi provisioning, and LED/key verification.
+
 1. Use the following command to setup a python virtual environment:
    ```bash
    python -m venv .venv
