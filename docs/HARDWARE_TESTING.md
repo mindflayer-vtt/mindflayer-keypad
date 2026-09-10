@@ -6,6 +6,10 @@ keypad events through Wi-Fi, pinned TLS, device authentication, binary CBOR,
 server dispatch, and the Foundry-facing WebSocket. The receiver substitutes for
 Foundry itself; this is not a Foundry module or signed OTA test.
 
+For multimeter measurements with the Z/X/C row held LOW continuously, use the
+separate [static-row electrical diagnostic](STATIC_ROW_DIAGNOSTIC.md). It is not
+normal keypad firmware and requires USB reinstallation to restore operation.
+
 ## Start
 
 Connect a 4 MiB ESP8266 keypad, identify its stable serial path, and install the

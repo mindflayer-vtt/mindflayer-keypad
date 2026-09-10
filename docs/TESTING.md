@@ -28,6 +28,11 @@ Run this suite alone with:
 python3 -m unittest discover -s test -p test_keyboard_matrix.py
 ```
 
+`test/test_static_row.py` checks the isolated electrical diagnostic's actual GPIO
+setup: only GPIO0 (the Z/X/C row) goes LOW, the other rows are HIGH, and all three
+column inputs retain their pull-ups. See [STATIC_ROW_DIAGNOSTIC.md](STATIC_ROW_DIAGNOSTIC.md)
+for its separate firmware build and measurement procedure.
+
 `test/host/application_deadline.cpp` links the real `src/Application.cpp` against simulated SDK time, flash settings, and network I/O. Its six scenarios check unavailable Wi-Fi, provisioning failure, invalid server-key loading, a yielding connection stall, a yielding poll stall, and a permanent boot that must not time out. Temporary scenarios must restart at exactly 90 seconds even when the application has not returned from `setup()` or `poll()`. These tests failed against the original scheduling logic before the fix.
 
 The same host runner checks the restored Shift + Space + E restart shortcut for
