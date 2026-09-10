@@ -179,3 +179,26 @@ order. There were no duplicate transitions, missing keys, or observed disconnect
 all keys ended released. Keypad 4 passes this LED and single-key exercise on
 `0.0.4-hwtest.1`. This does not establish long-term USB reliability or confirm
 which physical resistor modifications were performed on this particular board.
+
+## Keypad 5 repeat setup
+
+The operator connected keypad 5 and requested flashing and testing. It
+authenticated on the shared server as `hwtest-keypad5` running `0.0.4-hwtest.1`
+before the requested reflash, confirming its existing provisioning still works.
+Its known MAC `3c:61:05:d0:53:56` and exact 4 MiB capacity were verified over USB
+and checked again immediately before writing.
+
+The same verified `0.0.4-hwtest.1` artifact was selected, SHA-256
+`dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc`,
+with 30 ms debounce and the production trust anchor. Corrected rBoot and initial
+slot-A metadata accompany the application; provisioning is outside the write
+regions. The existing shared server remains running, with keypad 5's counters
+initially empty. This is a new controlled test, separate from the earlier keypad 5
+passes. No exact physical resistor modification on this board is assumed from
+the operator's readiness message alone.
+
+All flash regions passed esptool hash verification. At 01:34:34 UTC keypad 5
+authenticated and registered `0.0.4-hwtest.1` after the reflash, retaining its
+existing provisioning. The targeted LED sequence was started and the operator
+was invited to perform a full-key pass after both LEDs reach dim green. Physical
+LED confirmation and the new key-test results remain pending.
