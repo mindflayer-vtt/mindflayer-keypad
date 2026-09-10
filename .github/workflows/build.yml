@@ -77,6 +77,8 @@ jobs:
           python-version: "3.13"
       - name: Install release dependencies
         run: npm ci
+      - name: Test release-note generation
+        run: npm run test:release
       - name: Install PlatformIO Core
         run: python -m pip install platformio==6.1.19
       - name: Create semantic release

@@ -8,6 +8,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "test:release": "node --test test/release-notes.test.mjs",
     "format": "npm run format:cpp && npm run format:docs",
     "format:check": "npm run format:cpp:check && npm run format:docs:check",
     "format:cpp": "clang-format -i src/*.cpp src/*.h include/*.h lib/*/*.cpp lib/*/*.h test/*/*.cpp test/host/*.h test/host/application/*.h scripts/*.h",
@@ -20,7 +21,7 @@
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/github": "^12.0.9",
     "@semantic-release/release-notes-generator": "^14.1.1",
-    "conventional-changelog-conventionalcommits": "^10.4.0",
+    "conventional-changelog-conventionalcommits": "9.3.1",
     "prettier": "3.6.2",
     "semantic-release": "^25.0.9"
   }
