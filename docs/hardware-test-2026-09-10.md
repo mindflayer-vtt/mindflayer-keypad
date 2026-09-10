@@ -40,3 +40,14 @@ A serial reset/read check captured the expected diagnostic boot banner and
 repeated `D5/Z=1 D6/X=1 D7/C=1` readings, confirming the diagnostic loop is
 running. These are digital observations, not voltage measurements or confirmation
 of the operator's switch positions. The board is ready for DC-voltage readings.
+
+The operator reports the tested column inputs only falling to approximately
+1.4 V with keys pressed during the static-row diagnostic. Individual per-key
+readings were not supplied. At a nominal 3.3 V I/O supply, 1.4 V exceeds the
+ESP8266's guaranteed LOW ceiling of 0.825 V; it is not a guaranteed HIGH either.
+This establishes insufficient LOW-level margin for the reported measurements,
+without establishing the precise pull-up resistance or diode forward voltage.
+The result can explain unreliable digital detection and means debounce alone is
+not an adequate electrical remedy. Confirm the selected D3/GPIO0 row voltage
+relative to GND and the actual 3V3 supply before attributing all of the excess
+voltage specifically to the 12 kΩ series resistor and diode.
