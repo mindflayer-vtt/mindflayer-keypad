@@ -214,3 +214,14 @@ because of that connection flag. The test server was restarted with unchanged
 TLS identity and credentials to clear session state and event counters. Keypad 5
 authenticated again at 01:36:31 UTC; a fresh targeted LED sequence was started.
 No firmware or provisioning change was made for this repeat.
+
+### Keypad 5 completed repeat
+
+The restarted LED sequence ran at 01:36:47–01:37:07 UTC and the operator
+confirmed its colors were correct. The full-key pass at 01:37:09–01:37:15 UTC
+produced exactly one down/up pair for all eleven keys in order: Q, W, E, A, S,
+D, Z, X, C, Shift, Space. All keys ended released, with no duplicate transitions,
+missing keys, or observed disconnects during this repeat. Keypad 5 passes this
+LED and single-key exercise on `0.0.4-hwtest.1`. The earlier incomplete pass and
+reconnection remain separate observations; this success does not explain their
+cause or establish long-duration reliability.
