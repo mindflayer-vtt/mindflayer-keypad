@@ -51,3 +51,12 @@ The result can explain unreliable digital detection and means debounce alone is
 not an adequate electrical remedy. Confirm the selected D3/GPIO0 row voltage
 relative to GND and the actual 3V3 supply before attributing all of the excess
 voltage specifically to the 12 kΩ series resistor and diode.
+
+The operator subsequently measured D3 at GND and the 3V3 rail at approximately
+3.5 V. Using that measured supply, the guaranteed LOW ceiling is 0.875 V, so the
+approximately 1.4 V pressed inputs still exceed it by about 0.525 V. The selected
+row is correctly sinking to ground; an elevated row output does not explain the
+input voltage. The pull-up versus the series resistor/diode/contact path remains
+the likely explanation. A voltage measurement across the 12 kΩ resistor while
+holding the corresponding key can separate its contribution from the remaining
+diode/contact drop without changing firmware or components.
