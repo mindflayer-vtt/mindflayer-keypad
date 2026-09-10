@@ -12,7 +12,15 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 cd "$repo_dir"
-rg -n '#define (WIFI_SSID|WIFI_PASS|DEVICE_SECRET_HEX|SERVER_PUBLIC_KEY_PEM|ESP_NAME)|-D(ESP_NAME|WIFI_|DEVICE_SECRET|SERVER_PUBLIC)|#include "config.h"' src lib include platformio.ini && { echo 'Installation-specific build input found' >&2; exit 1; } || true
+scan_status=0
+rg -n '#define (WIFI_SSID|WIFI_PASS|DEVICE_SECRET_HEX|SERVER_PUBLIC_KEY_PEM|ESP_NAME)|-D(ESP_NAME|WIFI_|DEVICE_SECRET|SERVER_PUBLIC)|#include "config.h"' src lib include platformio.ini || scan_status=$?
+if (( scan_status == 0 )); then
+  echo 'Installation-specific build input found' >&2
+  exit 1
+elif (( scan_status != 1 )); then
+  echo 'Unable to scan for installation-specific build inputs' >&2
+  exit "$scan_status"
+fi
 rg -q '#define NEOPIXEL_DATA_PIN 3' include/HardwareConfig.h
 rg -q 'NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod>' src/LedController.cpp
 if rg -n 'NeoEsp8266BitBang|NEOPIXEL_DATA_PIN 2' src lib include README.md docs/PROVISIONING.md docs/DEVICE_PROTOCOL.md; then
