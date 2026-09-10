@@ -60,3 +60,18 @@ input voltage. The pull-up versus the series resistor/diode/contact path remains
 the likely explanation. A voltage measurement across the 12 kΩ resistor while
 holding the corresponding key can separate its contribution from the remaining
 diode/contact drop without changing firmware or components.
+
+The operator measured approximately 0.88 V across the column series resistor
+while pressed and questioned whether its intended value was 10 kΩ. Combined
+with the approximately 1.4 V input reading, this leaves roughly 0.52 V across
+the diode/contact path to the grounded row. The checked-in schematic specifies
+12 kΩ for R1–R3; fitted resistance has not been independently measured.
+
+Assuming 12 kΩ is fitted and the readings describe the same steady condition,
+the inferred current is about 73 µA and effective internal pull-up resistance
+about 29 kΩ. A simple constant-diode-drop model predicts roughly 1.3 V even
+with 10 kΩ series resistance, so that small change would not restore adequate
+LOW margin. Bypassing one identified column series resistor is a proposed
+controlled experiment with power disconnected during soldering and the switch
+diodes retained; it has not yet been performed or validated. Lower series
+resistance retains more fault-current limiting than a direct bridge.
