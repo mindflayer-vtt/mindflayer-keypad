@@ -248,3 +248,19 @@ All flashed regions passed esptool hash verification. At 01:46:19 UTC keypad 1
 authenticated and registered `0.0.4-hwtest.1` using its retained provisioning.
 The targeted LED sequence was started, with a full-key pass requested afterward.
 Physical LED confirmation and the repeat's key results remain pending.
+
+### Keypad 1 completed key pass and subsequent reconnect
+
+The LED sequence ran at 01:46:31–01:46:51 UTC and the operator confirmed it
+was correct. The full-key pass at 01:46:52–01:46:58 UTC produced exactly one
+down/up pair for all eleven keys in order, including the previously unreliable
+A, Shift, and Space. No keys were missing and no duplicate transitions occurred;
+all reported keys ended released.
+
+A fresh authenticated registration followed at 01:47:08 UTC, about nine seconds
+after the final key release. A disconnect notification arrived at 01:47:09,
+leaving the harness's connection flag false. As in earlier same-ID reconnects,
+that late notification alone does not establish whether a newer socket is still
+usable. The LED and key exercise passes, but connection/power stability is not
+established. Whether the operator moved/reset the board after the key pass, and
+the reason for the new registration, remain unconfirmed.
