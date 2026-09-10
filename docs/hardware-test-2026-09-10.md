@@ -97,3 +97,27 @@ series resistance as the source of inadequate LOW-level margin on this board.
 It does not yet validate released-input voltages, dynamic scan settling,
 multi-key behavior, or the absence of remaining switch faults. Production
 firmware is still not restored; a normal-scanner full-key test is the next step.
+
+## Restore normal firmware after measurement
+
+The operator authorized restoring the normal 30 ms debounce build for a full-key
+test. The exact previously verified `0.0.4-hwtest.1` production application was
+selected, with SHA-256:
+
+```text
+dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc
+```
+
+Preflight revalidated application/bootloader formats and initial slot-A metadata,
+the production signing trust anchor, and the corrected transactional bootloader
+marker. Keypad 6's MAC and exact 4 MiB flash size were checked again immediately
+before writing. Restoration replaces the diagnostic with corrected rBoot,
+initial slot-A metadata, and the normal application; provisioning sectors are
+outside the write regions. The shared server was restarted with unchanged TLS
+identity and device credentials, clearing accumulated counters from earlier
+sessions for the new controlled test. The physical column-resistor bridges remain.
+
+All written regions passed esptool hash verification. At 00:53:43 UTC keypad 6
+authenticated as `hwtest-keypad6` and registered `0.0.4-hwtest.1`, confirming
+normal firmware operation and reuse of its retained provisioning. The receiver
+is ready for the post-bridge full-key pass; no key-test result is claimed yet.
