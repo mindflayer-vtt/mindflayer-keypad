@@ -138,3 +138,31 @@ missing-key behavior. The firmware also changed from the earlier non-debounced
 baseline, so the disappearance of duplicate transitions cannot be attributed
 solely to the resistor bridges. Long-duration and simultaneous-key tests after
 the modification remain unverified.
+
+## Keypad 4 flash and provisioning
+
+Earlier attempts to access keypad 4 found no USB serial adapter, preventing
+identification or flashing. Following the operator's latest reconnection, the
+FTDI enumerated and the board identified as ESP8266EX, MAC `8c:aa:b5:7b:db:35`,
+with exactly 4 MiB flash. This restores access but does not by itself prove the
+reported intermittent USB concern is permanently resolved.
+
+The operator requested normal firmware installation. The same verified
+`0.0.4-hwtest.1` application (30 ms debounce, production signing trust anchor)
+was selected, SHA-256
+`dfa5fcba395e9194ef251e37a4073e922a4c1c2cf8e0b9c19e194603c64b7fdc`.
+Image/metadata preflight and the corrected bootloader marker passed, and the
+connected MAC/flash capacity were checked again immediately before writing.
+The shared test server retains its TLS identity and existing device credentials,
+with a new separate `hwtest-keypad4` credential and private provisioning bundle.
+No key/LED exercise was requested for this flash-only step. The operator has
+not explicitly confirmed completion of keypad 4's resistor modification, so no
+post-modification hardware result is claimed.
+
+The corrected rBoot, initial slot-A metadata, and application were serial-flashed;
+all written regions passed esptool hash verification. The normal serial
+provisioning tool then entered recovery, received the provisioning acknowledgement,
+and rebooted keypad 4. No whole-chip erase was performed.
+At 01:28:53 UTC it authenticated as `hwtest-keypad4` and registered
+`0.0.4-hwtest.1`. Flash/provisioning and server connectivity are verified;
+physical key and LED testing remain deferred.
