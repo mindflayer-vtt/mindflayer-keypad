@@ -87,3 +87,13 @@ diagnostic remains installed; production firmware has not yet been restored.
 Serial observation after reconnection confirmed the diagnostic loop remains
 active, reporting all three column inputs HIGH during that observation. No
 firmware write or reset was performed for this check.
+
+The operator reports approximately 0.53 V ±0.01 V at the pressed column inputs
+after bridging the three resistors, compared with approximately 1.4 V before.
+At the previously measured 3.5 V supply, even 0.54 V is below the guaranteed
+LOW ceiling of 0.875 V, giving approximately 0.335 V of margin. This validates
+the static pressed-input voltage improvement and strongly supports the original
+series resistance as the source of inadequate LOW-level margin on this board.
+It does not yet validate released-input voltages, dynamic scan settling,
+multi-key behavior, or the absence of remaining switch faults. Production
+firmware is still not restored; a normal-scanner full-key test is the next step.
