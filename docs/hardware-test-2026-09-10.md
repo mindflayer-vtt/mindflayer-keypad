@@ -121,3 +121,20 @@ All written regions passed esptool hash verification. At 00:53:43 UTC keypad 6
 authenticated as `hwtest-keypad6` and registered `0.0.4-hwtest.1`, confirming
 normal firmware operation and reuse of its retained provisioning. The receiver
 is ready for the post-bridge full-key pass; no key-test result is claimed yet.
+
+## Post-bridge full-key result
+
+The operator completed the full-key pass at 00:54:13–00:54:19 UTC. All eleven
+keys (Q, W, E, A, S, D, Z, X, C, Shift, Space) produced exactly one down/up
+pair in the requested order. There were no missing keys, duplicate transitions,
+or observed disconnects, and every key ended released. In particular, X and C
+now register normally after being absent in the earlier controlled passes.
+
+Keypad 6 therefore passes this single-key exercise with the three column-series
+resistors bridged and `0.0.4-hwtest.1`/30 ms debounce installed. Together with the
+pressed-voltage improvement from approximately 1.4 V to 0.53 V, this strongly
+supports inadequate electrical LOW margin as a contributor to the earlier
+missing-key behavior. The firmware also changed from the earlier non-debounced
+baseline, so the disappearance of duplicate transitions cannot be attributed
+solely to the resistor bridges. Long-duration and simultaneous-key tests after
+the modification remain unverified.
