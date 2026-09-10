@@ -166,3 +166,16 @@ and rebooted keypad 4. No whole-chip erase was performed.
 At 01:28:53 UTC it authenticated as `hwtest-keypad4` and registered
 `0.0.4-hwtest.1`. Flash/provisioning and server connectivity are verified;
 physical key and LED testing remain deferred.
+
+### Keypad 4 LED and full-key result
+
+The operator subsequently requested testing. The harness sent all nine targeted
+LED commands at 01:31:29–01:31:49 UTC, ending with both LEDs dim green. The
+operator explicitly confirmed the LED sequence was correct.
+
+The completed key pass at 01:31:55–01:32:01 UTC produced exactly one down/up
+pair for each of Q, W, E, A, S, D, Z, X, C, Shift, and Space, in the requested
+order. There were no duplicate transitions, missing keys, or observed disconnects;
+all keys ended released. Keypad 4 passes this LED and single-key exercise on
+`0.0.4-hwtest.1`. This does not establish long-term USB reliability or confirm
+which physical resistor modifications were performed on this particular board.
