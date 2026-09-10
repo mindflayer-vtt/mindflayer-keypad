@@ -77,6 +77,11 @@ all connected boards. Only one timed LED sequence runs at a time; key events fro
 all boards are recorded throughout. Optional OTA targeting applies only to the
 startup ID.
 
+The harness explicitly disables the server's default automatic stable-release
+updates. Bench keypads retain the installed test firmware unless you select an
+explicit OTA target; discovery must not interrupt LED or key measurements. Normal
+production server startup automatically updates eligible keypads instead.
+
 The sibling server's `test/multiple-devices.integration.test.js` verifies two
 simultaneously authenticated TLS clients, independent key identities and LED
 routing, and one client's disconnect/reconnect while the other remains usable.

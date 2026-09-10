@@ -172,6 +172,15 @@ see the [replacement-module test record](hardware-test-2026-09-10.md#keypad-1-re
 
 ## 5. Verify operation
 
+The production server automatically installs newer stable verified releases by
+default. A newly provisioned keypad may therefore download an update and reboot
+as soon as it connects. Wait for it to reconnect before checking LEDs and keys,
+and record the final reported firmware version. To hold a specific version during
+commissioning, set `"autoUpdate": false` in that device's server `devices.json`
+entry (with no `targetVersion`), then restart the server before connecting it.
+Remove the opt-out afterward to follow stable releases. The physical test harness
+below disables automatic discovery and only installs explicitly selected targets.
+
 - After reboot, the left LED should progress **red → yellow → green**:
   booting/no Wi-Fi, Wi-Fi connected, then server authenticated. Early stages
   can be brief. Server color commands may override the connection color.

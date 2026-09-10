@@ -48,6 +48,8 @@ if (targetVersion) {
 const { startAll } = require(path.join(serverRepo, "src/index"));
 const WebSocket = require(path.join(serverRepo, "node_modules/ws"));
 const runtime = startAll({
+  // Bench sessions install only firmware explicitly selected by the operator.
+  autoFirmwareUpdates: false,
   host: "127.0.0.1",
   deviceHost,
   foundryPort: 8080,
