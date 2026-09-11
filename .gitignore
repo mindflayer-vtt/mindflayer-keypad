@@ -48,6 +48,8 @@ include/config.h
 /node_modules/
 .briefing/
 /.gitlab-ci-lsp-cache/
+__pycache__/
+*.pyc
 
 # include the firmware signing public key
 !/keys/firmware-signing-public.pem

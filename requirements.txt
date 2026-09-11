@@ -1,0 +1,2 @@
+# Shared CI/release build dependency, discoverable by Dependabot.
+platformio==6.1.19
