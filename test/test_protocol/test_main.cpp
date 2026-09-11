@@ -130,9 +130,9 @@ void test_protocol_exact_fixtures() {
   size_t n;
   TEST_ASSERT_TRUE(
       protocol::buildRegistration(out, sizeof(out), n, "1.2.3", "mindflayer-keypad-v1"));
-  assertBytes(out, n, "84030265312e322e33746d696e64666c617965722d6b65797061642d7631");
+  assertBytes(out, n, "84030365312e322e33746d696e64666c617965722d6b65797061642d7631");
   TEST_ASSERT_TRUE(protocol::buildKeyEvent(out, sizeof(out), n, "W", true));
-  assertBytes(out, n, "8404020101");
+  assertBytes(out, n, "8404030101");
   uint8_t challengeFrame[37];
   fromHex((std::string("8300015820") + std::string(64, '1')).c_str(), challengeFrame,
           sizeof(challengeFrame));
@@ -143,20 +143,20 @@ void test_protocol_exact_fixtures() {
   TEST_ASSERT_TRUE(
       protocol::buildAuthResponse(out, sizeof(out), n, "controller1", secret, challenge.challenge));
   assertBytes(out, n,
-              "8401026b636f6e74726f6c6c6572315820e371e039a5fa8d68355af25c83deece181accbbd6f3cac420d"
+              "8401036b636f6e74726f6c6c6572315820e371e039a5fa8d68355af25c83deece181accbbd6f3cac420d"
               "63b9b1ec194c7e");
 }
 void test_protocol_decodes_server_fixtures() {
   uint8_t f[512];
   protocol::Configuration c;
-  size_t n = fromHex("880502010203040506", f, sizeof(f));
+  size_t n = fromHex("880503010203040506", f, sizeof(f));
   TEST_ASSERT_TRUE(protocol::parseConfiguration(f, n, c));
   TEST_ASSERT_EQUAL_UINT8(6, c.led2.b);
   protocol::AuthResult auth;
-  n = fromHex("840202006b636f6e74726f6c6c657231", f, sizeof(f));
+  n = fromHex("840203006b636f6e74726f6c6c657231", f, sizeof(f));
   TEST_ASSERT_TRUE(protocol::parseAuthResult(f, n, auth));
   TEST_ASSERT_EQUAL_STRING("controller1", auth.deviceId);
-  const char* update = "87060265312e322e33187b58200000000000000000000000000000000000000000000000000"
+  const char* update = "87060365312e322e33187b58200000000000000000000000000000000000000000000000000"
                        "000000000000000712f6669726d776172652f612f312e322e33582033333333333333333333"
                        "33333333333333333333333333333333333333333333";
   n = fromHex(update, f, sizeof(f));
@@ -165,7 +165,7 @@ void test_protocol_decodes_server_fixtures() {
   TEST_ASSERT_EQUAL_UINT32(123, u.size);
   TEST_ASSERT_EQUAL_STRING("/firmware/a/1.2.3", u.path);
   protocol::FirmwareAccepted accepted;
-  n = fromHex("83070265312e322e33", f, sizeof(f));
+  n = fromHex("83070365312e322e33", f, sizeof(f));
   TEST_ASSERT_TRUE(protocol::parseFirmwareAccepted(f, n, accepted));
   TEST_ASSERT_EQUAL_STRING("1.2.3", accepted.version);
 }
@@ -182,18 +182,46 @@ void test_restricted_protocol_rejects_malformed_corpus() {
     TEST_ASSERT_FALSE(protocol::parseConfiguration(cases[i], sizes[i], c));
   uint8_t huge[protocol::MAX_DEVICE_FRAME_SIZE + 1] = {0};
   TEST_ASSERT_FALSE(protocol::parseConfiguration(huge, sizeof(huge), c));
-  const uint8_t invalidUtf8[] = {0x84, 0x02, 0x02, 0x00, 0x61, 0xff};
+  const uint8_t invalidUtf8[] = {0x84, 0x02, 0x03, 0x00, 0x61, 0xff};
   protocol::AuthResult result;
   TEST_ASSERT_FALSE(protocol::parseAuthResult(invalidUtf8, sizeof(invalidUtf8), result));
-  const uint8_t wrongVersion[] = {0x88, 0x05, 0x03, 1, 2, 3, 4, 5, 6};
+  const uint8_t wrongVersion[] = {0x88, 0x05, 0x04, 1, 2, 3, 4, 5, 6};
   TEST_ASSERT_FALSE(protocol::parseConfiguration(wrongVersion, sizeof(wrongVersion), c));
   const uint8_t missingVersion[] = {0x87, 0x05, 1, 2, 3, 4, 5, 6};
   TEST_ASSERT_FALSE(protocol::parseConfiguration(missingVersion, sizeof(missingVersion), c));
-  const uint8_t nonShortestVersion[] = {0x88, 0x05, 0x18, 0x02, 1, 2, 3, 4, 5, 6};
+  const uint8_t nonShortestVersion[] = {0x88, 0x05, 0x18, 0x03, 1, 2, 3, 4, 5, 6};
   TEST_ASSERT_FALSE(
       protocol::parseConfiguration(nonShortestVersion, sizeof(nonShortestVersion), c));
-  const uint8_t embeddedNul[] = {0x84, 0x02, 0x02, 0x00, 0x63, 'a', 0, 'b'};
+  const uint8_t embeddedNul[] = {0x84, 0x02, 0x03, 0x00, 0x63, 'a', 0, 'b'};
   TEST_ASSERT_FALSE(protocol::parseAuthResult(embeddedNul, sizeof(embeddedNul), result));
+}
+void test_configuration_proof_exact_bytes_and_bounds() {
+  uint8_t query[38], output[512];
+  const std::string nonce(64, '1');
+  size_t size = fromHex(("840803015820" + nonce).c_str(), query, sizeof(query));
+  protocol::ConfigurationQuery parsed;
+  TEST_ASSERT_TRUE(protocol::parseConfigurationQuery(query, size, parsed));
+  size_t written = 0;
+  TEST_ASSERT_TRUE(protocol::buildConfigurationReport(output, sizeof(output), written, parsed.nonce,
+                                                      (const uint8_t*)"abc", 3));
+  assertBytes(output, written,
+              ("8409035820" + nonce +
+               "5820ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+                  .c_str());
+  uint8_t encoded[provisioning::MAX_ENVELOPE_SIZE];
+  const size_t envelopeSize = envelope(sample(), encoded);
+  TEST_ASSERT_TRUE(protocol::buildConfigurationReport(output, sizeof(output), written, parsed.nonce,
+                                                      encoded, envelopeSize));
+  assertBytes(output, written,
+              ("8409035820" + nonce +
+               "5820f9e0227920817d77cc79be1044d8197ac5be4f47b045ff18ee88ef041c2764b5")
+                  .c_str());
+  query[3] = 2;
+  TEST_ASSERT_FALSE(protocol::parseConfigurationQuery(query, size, parsed));
+  TEST_ASSERT_FALSE(protocol::buildConfigurationReport(output, sizeof(output), written,
+                                                       parsed.nonce, nullptr, 1));
+  TEST_ASSERT_FALSE(protocol::buildConfigurationReport(output, sizeof(output), written,
+                                                       parsed.nonce, query, 1036));
 }
 void test_crc_and_envelope() {
   TEST_ASSERT_EQUAL_HEX32(0xcbf43926, provisioning::crc32((const uint8_t*)"123456789", 9));
@@ -414,21 +442,52 @@ void test_bounded_random_corpus_is_memory_safe() {
     protocol::Configuration configuration;
     protocol::UpdateAvailable update;
     protocol::FirmwareAccepted accepted;
+    protocol::ConfigurationQuery query;
+    protocol::LedCommand ledCommand;
     provisioning::Provisioning p;
     protocol::parseAuthChallenge(bytes, n, challenge);
     protocol::parseAuthResult(bytes, n, auth);
     protocol::parseConfiguration(bytes, n, configuration);
     protocol::parseUpdateAvailable(bytes, n, update);
     protocol::parseFirmwareAccepted(bytes, n, accepted);
+    protocol::parseConfigurationQuery(bytes, n, query);
+    protocol::parseLedCommand(bytes, n, ledCommand);
     provisioning::decodeEnvelope(bytes, n, p);
   }
+}
+void test_led_command_and_acknowledgement() {
+  uint8_t frame[128], output[128], expected[128];
+  const std::string nonce(64, '1');
+  const std::string encoded = "890a035820" + nonce + "000102030405";
+  const size_t n = fromHex(encoded.c_str(), frame, sizeof(frame));
+  protocol::LedCommand command;
+  TEST_ASSERT_TRUE(protocol::parseLedCommand(frame, n, command));
+  TEST_ASSERT_EQUAL_UINT8(0x11, command.nonce[0]);
+  TEST_ASSERT_EQUAL_UINT8(2, command.configuration.led1.b);
+  TEST_ASSERT_EQUAL_UINT8(3, command.configuration.led2.r);
+  for (size_t length = 0; length < n; length++)
+    TEST_ASSERT_FALSE(protocol::parseLedCommand(frame, length, command));
+  size_t written = 0;
+  TEST_ASSERT_TRUE(protocol::buildLedApplied(output, sizeof(output), written, command.nonce));
+  const std::string acknowledgement = "830b035820" + nonce;
+  const size_t expectedSize = fromHex(acknowledgement.c_str(), expected, sizeof(expected));
+  TEST_ASSERT_EQUAL_UINT(expectedSize, written);
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, output, written);
+  TEST_ASSERT_FALSE(protocol::buildLedApplied(output, 5, written, command.nonce));
+  frame[2] = 2;
+  TEST_ASSERT_FALSE(protocol::parseLedCommand(frame, n, command));
+  frame[2] = 3;
+  frame[4] = 31;
+  TEST_ASSERT_FALSE(protocol::parseLedCommand(frame, n, command));
 }
 void setUp() {}
 void tearDown() {}
 int main() {
   UNITY_BEGIN();
+  RUN_TEST(test_led_command_and_acknowledgement);
   RUN_TEST(test_protocol_exact_fixtures);
   RUN_TEST(test_protocol_decodes_server_fixtures);
+  RUN_TEST(test_configuration_proof_exact_bytes_and_bounds);
   RUN_TEST(test_restricted_protocol_rejects_malformed_corpus);
   RUN_TEST(test_crc_and_envelope);
   RUN_TEST(test_redundant_store_selection_and_updates);

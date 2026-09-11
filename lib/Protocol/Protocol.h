@@ -3,7 +3,7 @@
 #include <stdint.h>
 namespace mindflayer {
 namespace protocol {
-constexpr uint8_t AUTH_CHALLENGE_VERSION = 1, PROTOCOL_VERSION = 2;
+constexpr uint8_t AUTH_CHALLENGE_VERSION = 1, PROTOCOL_VERSION = 3;
 constexpr size_t MAX_DEVICE_FRAME_SIZE = 512, MAX_DEVICE_ID = 64, MAX_VERSION = 47,
                  MAX_HARDWARE_ID = 64, MAX_UPDATE_PATH = 191;
 enum MessageType : uint8_t {
@@ -14,7 +14,11 @@ enum MessageType : uint8_t {
   KEY_EVENT = 4,
   CONFIGURATION = 5,
   UPDATE_AVAILABLE = 6,
-  FIRMWARE_ACCEPTED = 7
+  FIRMWARE_ACCEPTED = 7,
+  CONFIGURATION_QUERY = 8,
+  CONFIGURATION_REPORT = 9,
+  LED_COMMAND = 10,
+  LED_APPLIED = 11
 };
 enum AuthStatus : uint8_t { AUTH_OK = 0, AUTH_FAILED = 1 };
 enum Action : uint8_t { ACTION_UP = 0, ACTION_DOWN = 1 };
@@ -23,6 +27,10 @@ struct LedColor {
 };
 struct Configuration {
   LedColor led1, led2;
+};
+struct LedCommand {
+  Configuration configuration;
+  uint8_t nonce[32];
 };
 struct AuthChallenge {
   uint8_t challenge[32];
@@ -41,6 +49,9 @@ struct UpdateAvailable {
 struct FirmwareAccepted {
   char version[MAX_VERSION + 1];
 };
+struct ConfigurationQuery {
+  uint8_t nonce[32];
+};
 bool parseAuthChallenge(const uint8_t*, size_t, AuthChallenge&);
 bool buildAuthResponse(uint8_t*, size_t, size_t&, const char*, const uint8_t[32],
                        const uint8_t[32]);
@@ -48,8 +59,12 @@ bool parseAuthResult(const uint8_t*, size_t, AuthResult&);
 bool buildRegistration(uint8_t*, size_t, size_t&, const char*, const char*);
 bool buildKeyEvent(uint8_t*, size_t, size_t&, const char*, bool);
 bool parseConfiguration(const uint8_t*, size_t, Configuration&);
+bool parseLedCommand(const uint8_t*, size_t, LedCommand&);
+bool buildLedApplied(uint8_t*, size_t, size_t&, const uint8_t[32]);
 bool parseUpdateAvailable(const uint8_t*, size_t, UpdateAvailable&);
 bool parseFirmwareAccepted(const uint8_t*, size_t, FirmwareAccepted&);
+bool parseConfigurationQuery(const uint8_t*, size_t, ConfigurationQuery&);
+bool buildConfigurationReport(uint8_t*, size_t, size_t&, const uint8_t[32], const uint8_t*, size_t);
 bool shouldRestart(bool, bool, bool);
 } // namespace protocol
 } // namespace mindflayer

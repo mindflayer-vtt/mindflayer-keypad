@@ -48,3 +48,8 @@ scripts/sign-firmware.sh \
   .pio/build/keypad_rboot/rboot-app.bin \
   "$private_key" mindflayer-keypad-v1 "$version" dist/firmware
 tar -C dist/firmware -czf "dist/mindflayer-keypad-$version-server-firmware.tar.gz" .
+python3 scripts/build-serial-bundle.py "$version" \
+  --rboot .pio/rboot-artifacts/rboot.bin \
+  --application .pio/build/keypad_rboot/rboot-app.bin \
+  --private-key "$private_key" \
+  --output "dist/mindflayer-keypad-$version-serial-install.tar.gz"

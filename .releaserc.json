@@ -19,6 +19,10 @@
           {
             "path": "dist/mindflayer-keypad-*-server-firmware.tar.gz",
             "label": "Server-ready signed keypad firmware"
+          },
+          {
+            "path": "dist/mindflayer-keypad-*-serial-install.tar.gz",
+            "label": "Authenticated initial serial installation bundle"
           }
         ]
       }

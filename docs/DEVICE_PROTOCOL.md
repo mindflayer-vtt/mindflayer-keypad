@@ -1,4 +1,48 @@
-# Mind Flayer Device Protocol v2
+# Mind Flayer Device Protocol v3
+
+Current firmware uses explicit version `3`. The v2 schemas and fixture bytes below
+remain the compatibility reference: replace their explicit version `2` with `3`
+for current firmware (the initial challenge stays version `1`). The server retains
+both v1 and v2 codecs. Deploy the updated server **before** flashing v3 firmware;
+an older server rejects the new authentication version.
+
+## Configuration proof extension
+
+Only a v3 connection receives `[8, 3, 1, nonce:bstr .size 32]` after registration.
+The keypad responds `[9, 3, nonce:bstr .size 32, digest:bstr .size 32]`. Algorithm
+`1` means SHA-256 of the canonical schema-v2 provisioning envelope reconstructed
+from settings loaded from the validated flash store at boot. Legacy provisioning
+schemas normalize to v2 before hashing. The server accepts the nonce once, on the
+same authenticated connection. The envelope and its secrets are never transmitted
+by this proof, only their digest. This does not acknowledge transient LED colours.
+
+Normative v3 query bytes are `840803015820` + `11` × 32. A report for envelope
+bytes `abc` is `8409035820` + `11` × 32 + `5820` + SHA-256(`abc`). Native and Node
+tests also assert the exact shared schema-v2 provisioning fixture digest
+`f9e0227920817d77cc79be1044d8197ac5be4f47b045ff18ee88ef041c2764b5`.
+
+## LED acknowledgement extension
+
+For authenticated, registered v3 keypads, the server sends
+`[10, 3, nonce:bstr .size 32, r1:uint8, g1:uint8, b1:uint8, r2:uint8, g2:uint8, b2:uint8]`.
+After calling the LED controller to apply both colours, firmware replies
+`[11, 3, nonce:bstr .size 32]`. This confirms firmware application, not optical
+measurement of the physical LEDs. The server clears confirmed colours before
+sending a command and accepts only the latest pending nonce on that connection.
+Superseded and replayed acknowledgements are ignored. Foundry or Identify can
+subsequently change the colours, which invalidates matching saved preferences.
+Receiver `led-state` events and late registration snapshots carry server-derived
+`appliedLeds` RGB objects; `null` means unconfirmed. Browser-supplied `led-state`
+messages cannot assert this metadata. V1/v2 retain their unacknowledged type-5
+configuration messages.
+
+Normative command bytes for channels 0..5 are `890a035820` + `11` × 32 +
+`000102030405`; the acknowledgement is `830b035820` + `11` × 32.
+
+The following v2 reference and historical resource measurements are retained for
+migration review; its physical telemetry does not constitute v3 hardware testing.
+
+## Retained v2 reference
 
 The direct keypad endpoint is `WSS /device/v1`. It accepts binary WebSocket frames only; Foundry continues to use JSON text frames on `/ws`. Every device frame is one definite-length RFC 8949 CBOR array and is rejected before QCBOR when its size is zero or exceeds 512 bytes.
 

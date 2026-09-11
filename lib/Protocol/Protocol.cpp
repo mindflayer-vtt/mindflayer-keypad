@@ -228,6 +228,36 @@ bool buildRegistration(uint8_t* output, size_t outputSize, size_t& written, cons
   addText(e, hardware);
   return finishEncode(e, written);
 }
+bool parseConfigurationQuery(const uint8_t* frame, size_t size, ConfigurationQuery& query) {
+  QCBORDecodeContext d;
+  uint64_t algorithm;
+  return startMessage(d, frame, size, 4, CONFIGURATION_QUERY) && getUInt(d, 1, algorithm) &&
+         algorithm == 1 && getBytes(d, query.nonce, sizeof(query.nonce)) && finish(d);
+}
+bool buildConfigurationReport(uint8_t* output, size_t outputSize, size_t& written,
+                              const uint8_t nonce[32], const uint8_t* envelope, size_t size) {
+  if (!nonce || !envelope || !size || size > 1035)
+    return false;
+  uint8_t digest[32];
+#ifdef __linux__
+  unsigned int digestLength = sizeof(digest);
+  if (!EVP_Digest(envelope, size, digest, &digestLength, EVP_sha256(), nullptr) ||
+      digestLength != 32)
+    return false;
+#else
+  br_sha256_context hash;
+  br_sha256_init(&hash);
+  br_sha256_update(&hash, envelope, size);
+  br_sha256_out(&hash, digest);
+#endif
+  QCBOREncodeContext e;
+  if (!startEncode(e, output, outputSize))
+    return false;
+  addMessageHeader(e, CONFIGURATION_REPORT);
+  QCBOREncode_AddBytes(&e, {nonce, 32});
+  QCBOREncode_AddBytes(&e, {digest, sizeof(digest)});
+  return finishEncode(e, written);
+}
 bool buildKeyEvent(uint8_t* output, size_t outputSize, size_t& written, const char* key,
                    bool isDown) {
   size_t code = 0;
@@ -256,6 +286,30 @@ bool parseConfiguration(const uint8_t* frame, size_t size, Configuration& config
   configuration = {{(uint8_t)c[0], (uint8_t)c[1], (uint8_t)c[2]},
                    {(uint8_t)c[3], (uint8_t)c[4], (uint8_t)c[5]}};
   return true;
+}
+bool parseLedCommand(const uint8_t* frame, size_t size, LedCommand& command) {
+  QCBORDecodeContext d;
+  LedCommand parsed;
+  uint64_t c[6];
+  if (!startMessage(d, frame, size, 9, LED_COMMAND) || !getBytes(d, parsed.nonce, 32))
+    return false;
+  for (uint8_t i = 0; i < 6; i++)
+    if (!getUInt(d, 255, c[i]))
+      return false;
+  if (!finish(d))
+    return false;
+  parsed.configuration = {{(uint8_t)c[0], (uint8_t)c[1], (uint8_t)c[2]},
+                          {(uint8_t)c[3], (uint8_t)c[4], (uint8_t)c[5]}};
+  command = parsed;
+  return true;
+}
+bool buildLedApplied(uint8_t* output, size_t outputSize, size_t& written, const uint8_t nonce[32]) {
+  QCBOREncodeContext e;
+  if (!nonce || !startEncode(e, output, outputSize))
+    return false;
+  addMessageHeader(e, LED_APPLIED);
+  QCBOREncode_AddBytes(&e, {nonce, 32});
+  return finishEncode(e, written);
 }
 bool parseUpdateAvailable(const uint8_t* frame, size_t size, UpdateAvailable& update) {
   QCBORDecodeContext d;

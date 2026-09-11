@@ -24,6 +24,7 @@ static_assert(_WS_CONFIG_MAX_MESSAGE_SIZE == protocol::MAX_DEVICE_FRAME_SIZE,
               "WebSocket pre-allocation limit differs from protocol limit");
 
 uint8_t frameBuffer[protocol::MAX_DEVICE_FRAME_SIZE];
+uint8_t configurationEnvelope[mindflayer::provisioning::MAX_ENVELOPE_SIZE];
 uint8_t pendingFrame[protocol::MAX_DEVICE_FRAME_SIZE];
 size_t pendingFrameSize = 0;
 uint8_t receivedFrame[protocol::MAX_DEVICE_FRAME_SIZE];
@@ -84,6 +85,20 @@ void processMessage(const uint8_t* data, size_t size) {
     return;
   }
   protocol::UpdateAvailable update;
+  protocol::ConfigurationQuery query;
+  if (state.authenticated && state.registered &&
+      protocol::parseConfigurationQuery(data, size, query)) {
+    size_t envelopeSize = 0;
+    // settings was loaded from the validated redundant flash store at boot.
+    // Normalize old schemas to the current canonical envelope before hashing.
+    if (mindflayer::provisioning::encodeEnvelope(state.settings, configurationEnvelope,
+                                                 sizeof(configurationEnvelope), envelopeSize) &&
+        protocol::buildConfigurationReport(frameBuffer, sizeof(frameBuffer), written, query.nonce,
+                                           configurationEnvelope, envelopeSize))
+      sendFrame(written);
+    memset(configurationEnvelope, 0, sizeof(configurationEnvelope));
+    return;
+  }
   if (state.authenticated && protocol::parseUpdateAvailable(data, size, update)) {
     state.client.close(CloseReason_GoingAway);
     state.client = WebsocketsClient();
@@ -121,6 +136,16 @@ void processMessage(const uint8_t* data, size_t size) {
     return;
   }
   protocol::Configuration configuration;
+  protocol::LedCommand ledCommand;
+  if (state.authenticated && state.registered &&
+      protocol::parseLedCommand(data, size, ledCommand)) {
+    const auto& colours = ledCommand.configuration;
+    LedController::setColors(colours.led1.r, colours.led1.g, colours.led1.b, colours.led2.r,
+                             colours.led2.g, colours.led2.b);
+    if (protocol::buildLedApplied(frameBuffer, sizeof(frameBuffer), written, ledCommand.nonce))
+      sendFrame(written);
+    return;
+  }
   if (state.authenticated && protocol::parseConfiguration(data, size, configuration)) {
     LedController::setColors(configuration.led1.r, configuration.led1.g, configuration.led1.b,
                              configuration.led2.r, configuration.led2.g, configuration.led2.b);
