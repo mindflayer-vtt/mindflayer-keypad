@@ -44,9 +44,9 @@ FIRMWARE_SIGNING_PRIVATE_KEY_FILE=/secure/offline/location/mindflayer-signing/si
 
 The generated release archive is written under `dist/`. Verify the first production archive before distributing or importing it into the server firmware repository.
 
-### Configure the GitHub Actions secret
+### Configure the GitHub Environment secret
 
-In GitHub, open **Repository settings → Secrets and variables → Actions**, create a repository secret, and use this exact name:
+In GitHub, open **Repository settings → Environments → firmware-release**. Protect this Environment with required reviewer approval and restrict deployment branches to `main`. The release job is bound to this Environment. Add an Environment secret with this exact name:
 
 ```text
 FIRMWARE_SIGNING_PRIVATE_KEY
@@ -62,13 +62,14 @@ Paste the complete private PEM as a multiline value, including its boundary line
 
 Do not base64-encode the value. `scripts/build-release.sh` writes the secret directly to a temporary mode-0600 file and removes that file when the release build exits.
 
+Once the Environment secret is configured, remove any duplicate `FIRMWARE_SIGNING_PRIVATE_KEY` repository-level Actions secret. Keep the signing secret only in the protected `firmware-release` Environment.
+
 Pay particular attention to the following:
 
 - Never commit the private key, copy it into the server repository or container, include it in release artifacts, or print it in workflow logs.
 - Keep at least one encrypted offline backup. Losing the private key prevents production of updates accepted by existing keypads.
 - Restrict repository administration and workflow-editing permissions. A person able to change and run the release workflow on `main` may be able to misuse the secret.
-- Consider placing the key in a protected GitHub Environment with required reviewers if every production release should have a human approval gate. Update the release job to use that environment before moving the secret there.
-- GitHub does not provide repository secrets to workflows triggered from forks. The release job uses the key only for pushes to `main`.
+- Require approval through the protected `firmware-release` Environment before production signing. The release job runs only for pushes to `main`.
 
 ### Key rotation warning
 
